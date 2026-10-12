@@ -43,6 +43,7 @@ export const getInvoice = createServerFn({ method: "GET" })
 			status: string;
 			txid: string | null;
 			received_zat: number;
+			overpaid_zat?: number;
 		};
 	});
 
@@ -114,6 +115,9 @@ export const createSwap = createServerFn({ method: "POST" })
 			},
 		);
 		const body = await res.json().catch(() => ({}));
+		if (res.status === 429) {
+			throw new Error(body.error ?? "Too many attempts, try again later");
+		}
 		if (!res.ok) throw new Error(body.error ?? `Swap failed (${res.status})`);
 		return {
 			symbol: body.symbol,

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { Logo } from "#/components/Logo";
-import { short, ZAT, zec } from "#/lib/format";
+import { partialText, short, underpaidText, ZAT, zec } from "#/lib/format";
 import { createInvoice, getInvoice, type Invoice } from "#/lib/invoice";
 import { useInvoiceStatus } from "#/lib/useInvoiceStatus";
 
@@ -122,7 +122,7 @@ function InvoiceView({
 	invoice: Invoice;
 	onDone: () => void;
 }) {
-	const { status } = useInvoiceStatus(invoice.id);
+	const { status, received, overpaid } = useInvoiceStatus(invoice.id);
 	const [now, setNow] = useState(() => Date.now() / 1000);
 	const [qr, setQr] = useState("");
 	const [txid, setTxid] = useState<string | null>(null);
@@ -156,6 +156,9 @@ function InvoiceView({
 					LUNAS
 				</h1>
 				<p className="text-3xl font-bold">{zec(invoice.amount_zat)}</p>
+				{overpaid > 0 && (
+					<p className="text-sm opacity-70">Overpaid by {zec(overpaid)}</p>
+				)}
 				{txid && (
 					<p className="font-mono text-sm opacity-70">tx {short(txid, 6)}</p>
 				)}
@@ -163,6 +166,24 @@ function InvoiceView({
 					type="button"
 					onClick={onDone}
 					className="mt-4 rounded-2xl bg-lunas px-10 py-4 text-xl font-bold text-malam active:scale-95"
+				>
+					New sale
+				</button>
+			</section>
+		);
+	}
+
+	if (status === "underpaid") {
+		return (
+			<section className="flex flex-1 flex-col items-center justify-center gap-6 p-6 text-center">
+				<h1 className="text-5xl font-bold">Partially paid</h1>
+				<p className="max-w-md opacity-70">
+					{underpaidText(received, invoice.amount_zat)}
+				</p>
+				<button
+					type="button"
+					onClick={onDone}
+					className="rounded-2xl bg-kertas px-10 py-4 text-xl font-bold text-malam active:scale-95"
 				>
 					New sale
 				</button>
@@ -219,6 +240,11 @@ function InvoiceView({
 							? "Payment detected, waiting for confirmation"
 							: "Waiting for payment"}
 					</output>
+					{status === "detected" && received < invoice.amount_zat && (
+						<p className="max-w-sm text-sm">
+							{partialText(received, invoice.amount_zat)}
+						</p>
+					)}
 					<Link
 						to="/checkout/$invoiceId"
 						params={{ invoiceId: invoice.id }}

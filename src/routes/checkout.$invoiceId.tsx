@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { Logo } from "#/components/Logo";
-import { short, zec } from "#/lib/format";
+import { partialText, short, underpaidText, zec } from "#/lib/format";
 import {
 	createSwap,
 	getSwapAssets,
@@ -38,12 +38,13 @@ const STEP_OF: Record<string, number> = {
 	PROCESSING: 2,
 	SUCCESS: 3,
 };
+const RETRY = new Set(["REFUNDED", "FAILED", "INCOMPLETE_DEPOSIT"]);
 const PROBLEM: Record<string, string> = {
 	REFUNDED:
 		"The swap could not complete and your funds were refunded to your refund address.",
 	FAILED: "The swap failed. Any deposit is returned to your refund address.",
 	INCOMPLETE_DEPOSIT:
-		"The deposit was less than required. Send the missing amount before the deadline, or it will be refunded.",
+		"The deposit was less than required and will be refunded. The invoice is still open: try another asset or pay with ZEC.",
 };
 
 function toMs(d: number | string): number {
@@ -100,7 +101,10 @@ function Checkout() {
 
 function Page({ invoice }: { invoice: InvoiceDetail }) {
 	const { z } = Route.useSearch();
-	const { status, swap } = useInvoiceStatus(invoice.id, invoice.status);
+	const { status, swap, received, overpaid } = useInvoiceStatus(
+		invoice.id,
+		invoice.status,
+	);
 	const now = useNow();
 	const left = Math.max(0, Math.floor(invoice.expires_at - now / 1000));
 	const expired = status === "expired" || (status === "pending" && left === 0);
@@ -113,10 +117,30 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 					LUNAS
 				</h1>
 				<p className="text-3xl font-bold">{zec(invoice.amount_zat)}</p>
+				{overpaid > 0 && (
+					<p className="text-sm opacity-70">Overpaid by {zec(overpaid)}</p>
+				)}
 				<p className="opacity-70">Paid to {STORE}. Thank you!</p>
 				<Link
 					to="/store"
 					className="mt-4 rounded-2xl bg-lunas px-10 py-4 text-xl font-bold text-malam"
+				>
+					Back to store
+				</Link>
+			</main>
+		);
+	}
+
+	if (status === "underpaid") {
+		return (
+			<main className="rise flex min-h-screen flex-col items-center justify-center gap-6 p-6 text-center">
+				<h1 className="text-5xl font-bold">Partially paid</h1>
+				<p className="max-w-md opacity-70">
+					{underpaidText(received, invoice.amount_zat)}
+				</p>
+				<Link
+					to="/store"
+					className="rounded-2xl bg-kertas px-8 py-3 font-bold text-malam"
 				>
 					Back to store
 				</Link>
@@ -170,6 +194,11 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 						uri={uri}
 						status={status}
 						swapStatus={swap}
+						partial={
+							status === "detected" && received < invoice.amount_zat
+								? partialText(received, invoice.amount_zat)
+								: undefined
+						}
 					/>
 				)}
 			</section>
@@ -182,11 +211,13 @@ function Panel({
 	uri,
 	status,
 	swapStatus,
+	partial,
 }: {
 	invoice: InvoiceDetail;
 	uri?: string;
 	status: string;
 	swapStatus?: string;
+	partial?: string;
 }) {
 	const [tab, setTab] = useState<"zec" | "other">(
 		invoice.swap ? "other" : "zec",
@@ -244,6 +275,7 @@ function Panel({
 					? "Payment detected, waiting for confirmation"
 					: "Waiting for payment"}
 			</output>
+			{partial && <p className="text-sm font-medium">{partial}</p>}
 		</div>
 	);
 }
@@ -326,6 +358,8 @@ function OtherTab({
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 	const [quote, setQuote] = useState<SwapInfo | null>(invoice.swap);
+	// Final swap status being retried; hide it until a new status arrives.
+	const [stale, setStale] = useState<string>();
 
 	useEffect(() => {
 		if (quote) return;
@@ -341,8 +375,20 @@ function OtherTab({
 			</p>
 		);
 	}
-	if (quote)
-		return <Deposit swap={quote} status={swapStatus ?? invoice.swap?.status} />;
+	if (quote) {
+		const cur = swapStatus ?? invoice.swap?.status;
+		return (
+			<Deposit
+				swap={quote}
+				status={cur === stale ? undefined : cur}
+				onRetry={() => {
+					setStale(cur);
+					setQuote(null);
+					setBusy(false);
+				}}
+			/>
+		);
+	}
 
 	const chains = [...new Set(assets?.map((a) => a.blockchain))].sort();
 	const chain = assets?.find((a) => a.asset_id === assetId)?.blockchain;
@@ -430,7 +476,15 @@ function OtherTab({
 	);
 }
 
-function Deposit({ swap, status }: { swap: SwapInfo; status?: string }) {
+function Deposit({
+	swap,
+	status,
+	onRetry,
+}: {
+	swap: SwapInfo;
+	status?: string;
+	onRetry: () => void;
+}) {
 	const now = useNow();
 	const left = Math.max(0, Math.floor((toMs(swap.deadline) - now) / 1000));
 	const step = STEP_OF[status ?? "PENDING_DEPOSIT"] ?? 0;
@@ -481,6 +535,15 @@ function Deposit({ swap, status }: { swap: SwapInfo; status?: string }) {
 				>
 					{problem}
 				</p>
+			)}
+			{status && RETRY.has(status) && (
+				<button
+					type="button"
+					onClick={onRetry}
+					className="rounded-2xl bg-malam py-3 font-bold text-kertas"
+				>
+					Try another asset
+				</button>
 			)}
 			<ol className="flex flex-col gap-2 text-sm">
 				{STEPS.map((s, i) => (
