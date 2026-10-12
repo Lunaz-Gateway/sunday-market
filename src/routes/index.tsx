@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Logo } from "#/components/Logo";
 import { btn, Dot, Icon, QrCode, useNow } from "#/components/ui";
-import { clock, fiat, short, underpaidText, ZAT, zec } from "#/lib/format";
+import { clock, fiat, short, ZAT, zec } from "#/lib/format";
 import { createInvoice, getInvoice, type Invoice } from "#/lib/invoice";
 import { useZecUsd } from "#/lib/price";
 import { useInvoiceStatus } from "#/lib/useInvoiceStatus";
@@ -410,7 +410,7 @@ function InvoiceView({
 		return (
 			<Outcome
 				title="Partially paid"
-				body={underpaidText(received, invoice.amount_zat)}
+				body={`Received ${zec(received)} of ${zec(invoice.amount_zat)} before the invoice closed. Collect the remaining ${zec(invoice.amount_zat - received)} another way, or refund the customer.`}
 				action="New sale"
 				onAction={() => onDone()}
 			/>
@@ -547,6 +547,12 @@ function Paid({
 
 	return (
 		<section className="flex flex-1 flex-col items-center justify-center gap-6 overflow-hidden px-4 py-10 text-center">
+			<p className="rise flex items-center gap-2 rounded-full bg-lunas/10 px-4 py-2 text-sm font-bold text-lunas">
+				<span className="grid h-5 w-5 place-items-center rounded-full bg-lunas text-malam">
+					<Icon name="check" className="h-3.5 w-3.5" />
+				</span>
+				Payment received
+			</p>
 			<div className="relative grid place-items-center">
 				<span
 					aria-hidden="true"
