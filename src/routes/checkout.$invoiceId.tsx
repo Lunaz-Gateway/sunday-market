@@ -31,7 +31,7 @@ export const Route = createFileRoute("/checkout/$invoiceId")({
 
 const MIN_SWAP_ZAT = 100_000;
 const STEPS = [
-	"Waiting for your deposit",
+	"Send your deposit",
 	"Deposit received",
 	"Swapping to ZEC",
 	"Paid in shielded ZEC",
@@ -195,6 +195,12 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	if (status === "paid") {
 		return (
 			<main className="flex min-h-dvh flex-col items-center justify-center gap-6 overflow-hidden px-4 py-10 text-center">
+				<p className="rise flex items-center gap-2 rounded-full bg-lunas/10 px-4 py-2 text-sm font-bold text-lunas">
+					<span className="grid h-5 w-5 place-items-center rounded-full bg-lunas text-malam">
+						<Icon name="check" className="h-3.5 w-3.5" />
+					</span>
+					Payment received
+				</p>
 				<div className="relative grid place-items-center">
 					<span
 						aria-hidden="true"
@@ -276,6 +282,7 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 						<div className="flex justify-between gap-4 border-t border-kertas/10 py-3">
 							<dt className="text-kertas/60">Expires in</dt>
 							<dd
+								suppressHydrationWarning
 								className={`font-semibold tnum ${!expired && left < 120 ? "text-danger" : ""}`}
 							>
 								{expired ? "Expired" : clock(left)}
@@ -738,6 +745,8 @@ function Deposit({
 	const step = STEP_OF[status ?? "PENDING_DEPOSIT"] ?? 0;
 	const problem = status ? PROBLEM[status] : undefined;
 	const done = status === "SUCCESS";
+	// Once the deposit is in (or failed), stop inviting another one.
+	const sending = step === 0 && !problem;
 	const usd = swap.amount_in_usd != null ? Number(swap.amount_in_usd) : NaN;
 	return (
 		<div className="rise flex flex-col gap-4">
@@ -745,7 +754,8 @@ function Deposit({
 				<TokenBadge symbol={swap.symbol} size="h-10 w-10" />
 				<div className="min-w-0 flex-1">
 					<p className="text-xs font-semibold text-kertas/60">
-						Send exactly · {chainName(swap.blockchain)}
+						{sending ? "Send exactly" : "Swap amount"} ·{" "}
+						{chainName(swap.blockchain)}
 					</p>
 					<p className="truncate text-xl font-extrabold tnum">
 						{swap.amount_in_formatted} {swap.symbol}
@@ -754,38 +764,52 @@ function Deposit({
 						<p className="text-xs text-kertas/60 tnum">≈ ${usd.toFixed(2)}</p>
 					)}
 				</div>
-				<CopyButton
-					text={swap.amount_in_formatted}
-					what="Amount"
-					label="Copy amount"
-					className="bg-kertas/10 hover:bg-kertas/15"
-				/>
-			</div>
-			<QrCode
-				text={swap.deposit_address}
-				alt={`${swap.symbol} deposit address QR code`}
-				symbol={false}
-				className="mx-auto w-full max-w-[13rem] ring-1 ring-malam/10"
-			/>
-			<Row
-				label="Deposit address"
-				value={swap.deposit_address}
-				what="Address"
-			/>
-			{swap.deposit_memo && (
-				<Row label="Memo (required)" value={swap.deposit_memo} what="Memo" />
-			)}
-			<p className="text-sm text-malam/70">
-				{left > 0 ? (
-					<>
-						Send within <b className="text-malam tnum">{clock(left)}</b>
-					</>
-				) : (
-					"The deposit window has closed."
+				{sending && (
+					<CopyButton
+						text={swap.amount_in_formatted}
+						what="Amount"
+						label="Copy amount"
+						className="bg-kertas/10 hover:bg-kertas/15"
+					/>
 				)}
-				{swap.time_estimate ? ` · usually done in ~${swap.time_estimate}s` : ""}
-			</p>
-
+			</div>
+			{sending && (
+				<>
+					<QrCode
+						text={swap.deposit_address}
+						alt={`${swap.symbol} deposit address QR code`}
+						symbol={false}
+						className="mx-auto w-full max-w-[13rem] ring-1 ring-malam/10"
+					/>
+					<Row
+						label="Deposit address"
+						value={swap.deposit_address}
+						what="Address"
+					/>
+					{swap.deposit_memo && (
+						<Row
+							label="Memo (required)"
+							value={swap.deposit_memo}
+							what="Memo"
+						/>
+					)}
+					<p className="text-sm text-malam/70">
+						{left > 0 ? (
+							<>
+								Send within{" "}
+								<b suppressHydrationWarning className="text-malam tnum">
+									{clock(left)}
+								</b>
+							</>
+						) : (
+							"The deposit window has closed."
+						)}
+						{swap.time_estimate
+							? ` · usually done in ~${swap.time_estimate}s`
+							: ""}
+					</p>
+				</>
+			)}
 			{problem && (
 				<div
 					role="alert"
