@@ -2,9 +2,14 @@
 
 @theme {
   --color-malam: #1c1f3d;
+  --color-malam-2: #262a52;
   --color-kertas: #f6f2e9;
   --color-lunas: #c8f169;
+  --color-danger: #ff8a7a;
+  --color-danger-ink: #a3261a;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 html,
@@ -14,33 +19,198 @@ body {
   background: var(--color-malam);
   color: var(--color-kertas);
   font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-lunas);
+  outline-offset: 3px;
+}
+
+.on-light :focus-visible {
+  outline-color: var(--color-malam);
+}
+
+/* Press feedback for every tappable surface. */
+.press {
+  transition:
+    transform 140ms var(--ease-out),
+    background-color 140ms ease,
+    opacity 140ms ease;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes pulse-dot {
   50% {
-    opacity: 0.3;
+    opacity: 0.35;
     transform: scale(0.7);
+  }
+}
+
+@keyframes ring {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
   }
 }
 
 @keyframes rise {
   from {
     opacity: 0;
-    transform: scale(0.94);
+    transform: translateY(8px);
+  }
+}
+
+@keyframes stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ripple {
+  from {
+    opacity: 0.45;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
   }
 }
 
 .pulse-dot {
-  animation: pulse-dot 1.2s ease-in-out infinite;
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: ring 1.6s var(--ease-out) infinite;
 }
 
 .rise {
-  animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: rise 360ms var(--ease-out) both;
+}
+
+.stamp {
+  animation: stamp 560ms var(--ease-out) both;
+}
+
+.ripple {
+  animation: ripple 900ms var(--ease-out) both;
+}
+
+.skeleton {
+  background: linear-gradient(
+      90deg,
+      transparent 25%,
+      color-mix(in srgb, currentColor 10%, transparent) 50%,
+      transparent 75%
+    )
+    0 0 / 200% 100%,
+    color-mix(in srgb, currentColor 8%, transparent);
+  animation: shimmer 1.4s linear infinite;
+}
+
+.toast {
+  transition:
+    opacity 220ms var(--ease-out),
+    transform 220ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+.toast[data-out] {
+  opacity: 0;
+  transform: translateY(100%);
+  transition-duration: 160ms;
+}
+
+[popover] {
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 160ms var(--ease-out),
+    display 160ms allow-discrete,
+    overlay 160ms allow-discrete;
+  opacity: 0;
+  transform: scale(0.96);
+  transform-origin: top right;
+}
+
+[popover]:popover-open {
+  opacity: 1;
+  transform: scale(1);
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot,
-  .rise {
+  .ring::after,
+  .skeleton {
     animation: none;
+  }
+  .rise,
+  .stamp {
+    animation: fade 200ms ease both;
+  }
+  .ripple {
+    display: none;
+  }
+  .press:active:not(:disabled) {
+    transform: none;
+  }
+  .toast,
+  .toast[data-out],
+  [popover] {
+    transform: none;
+    @starting-style {
+      transform: none;
+    }
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
   }
 }
