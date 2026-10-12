@@ -114,7 +114,6 @@ export const createSwap = createServerFn({ method: "POST" })
 			},
 		);
 		const body = await res.json().catch(() => ({}));
-		if (res.status === 409) throw new Error("This invoice is no longer open");
 		if (!res.ok) throw new Error(body.error ?? `Swap failed (${res.status})`);
 		return {
 			symbol: body.symbol,

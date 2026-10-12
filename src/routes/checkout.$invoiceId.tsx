@@ -23,6 +23,7 @@ export const Route = createFileRoute("/checkout/$invoiceId")({
 	component: Checkout,
 });
 
+const MIN_SWAP_ZAT = 100_000;
 const STORE = "Kedai Kopi Online";
 const STEPS = [
 	"Waiting for deposit",
@@ -124,9 +125,11 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	}
 
 	return (
-		<main className="mx-auto grid min-h-screen w-full max-w-5xl gap-8 p-6 md:grid-cols-2 md:items-start md:gap-16 md:py-16">
+		<main className="mx-auto grid min-h-screen w-full max-w-5xl gap-8 p-6 content-start md:grid-cols-2 md:items-start md:gap-16 md:py-16">
 			<section className="flex flex-col gap-6">
-				<Logo />
+				<div className="self-start">
+					<Logo />
+				</div>
 				<div>
 					<p className="text-sm font-medium opacity-70">Pay {STORE}</p>
 					<p className="text-5xl font-bold tabular-nums">
@@ -331,6 +334,13 @@ function OtherTab({
 			.catch(() => setLoadErr("Other assets are unavailable right now."));
 	}, [quote]);
 
+	if (!quote && invoice.amount_zat < MIN_SWAP_ZAT) {
+		return (
+			<p className="text-sm font-medium">
+				Cross-chain payments need at least 0.001 ZEC.
+			</p>
+		);
+	}
 	if (quote)
 		return <Deposit swap={quote} status={swapStatus ?? invoice.swap?.status} />;
 
@@ -429,7 +439,7 @@ function Deposit({ swap, status }: { swap: SwapInfo; status?: string }) {
 	return (
 		<div className="flex flex-col gap-4">
 			<div>
-				<p className="text-sm font-medium opacity-70">Send exactly</p>
+				<p className="text-sm font-medium opacity-70">You send</p>
 				<p className="text-2xl font-bold tabular-nums">
 					{swap.amount_in_formatted} {swap.symbol}{" "}
 					<span className="text-sm font-medium opacity-70">

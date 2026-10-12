@@ -14,14 +14,19 @@ const PRODUCTS = [
 		id: "espresso",
 		name: "Espresso Gayo",
 		note: "Single origin, 250 g",
-		zat: 10_000,
+		zat: 50_000,
 	},
-	{ id: "v60", name: "V60 Filter Pack", note: "40 paper filters", zat: 50_000 },
+	{
+		id: "v60",
+		name: "V60 Filter Pack",
+		note: "40 paper filters",
+		zat: 120_000,
+	},
 	{
 		id: "beans",
 		name: "Toraja Beans",
 		note: "Medium roast, 1 kg",
-		zat: 100_000,
+		zat: 200_000,
 	},
 ];
 
