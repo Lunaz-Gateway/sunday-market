@@ -1,194 +1,77 @@
-Welcome to your new TanStack Start app!
+# Lunaz demo app
 
-# Getting Started
+Reference clients for the Lunaz Zcash payment gateway. Built with TanStack Start (React 19), Vite 8, Tailwind 4 and Biome. The package manager is bun.
 
-To run this application:
+## Pages
+
+- `/` is a cashier tablet. The merchant enters an amount and creates an invoice.
+- `/store` is a demo store that creates an invoice at checkout.
+- `/checkout/$invoiceId` is a hosted checkout. It shows a Zcash QR code and address, live status over WebSocket, and cross-chain payment via NEAR Intents (pay with another asset, swapped to ZEC).
+
+## API key stays on the server
+
+Invoice calls (`src/lib/invoice.ts`) are TanStack server functions. They run on the server and send `Authorization: Bearer $LUNAZ_API_KEY` to core-service. The key is never sent to the browser. The browser only receives the invoice, and opens a WebSocket to core-service for live status (`/v1/invoices/:id/ws`, no key needed).
+
+## Environment
+
+| Variable | Where | Description |
+| --- | --- | --- |
+| `LUNAZ_API_KEY` | server, runtime, secret | merchant API key |
+| `LUNAZ_API_URL` | server, runtime | core-service base URL (default `http://127.0.0.1:8099`) |
+| `VITE_LUNAZ_WS_URL` | public, build time | WebSocket base URL the browser connects to (default `ws://127.0.0.1:8099`) |
+
+`VITE_*` values are baked into the client bundle at build time and are public. Use `wss://` when the page is served over HTTPS.
+
+## Local development
 
 ```bash
+cp .env.example .env   # set LUNAZ_API_KEY
 bun install
-bun --bun run dev
+bun run dev            # http://localhost:3000
+bun run check          # biome
 ```
 
-# Building For Production
+## Production build and Docker
 
-To build this application for production:
+`bun run build` writes `dist/client` (static assets) and `dist/server/server.js` (a fetch handler). `server.mjs` serves both with [srvx](https://srvx.h3.dev) on `HOST:PORT` (default `0.0.0.0:3000`). It runs on Node 22.
+
+The final image stage is `distroless/nodejs22-debian12:nonroot`: no shell, non-root. `.env*` files are excluded by `.dockerignore`, so the API key is never baked in. Pass it at runtime only. A `HEALTHCHECK` requests `/`.
 
 ```bash
-bun --bun run build
+docker build --build-arg VITE_LUNAZ_WS_URL=wss://api.example.com -t lunaz-demo .
+
+docker run -d --name lunaz-demo --read-only --tmpfs /tmp --cap-drop ALL \
+  --security-opt no-new-privileges:true --pids-limit 256 --memory 512m \
+  -p 127.0.0.1:3000:3000 -e LUNAZ_API_URL=http://core:8080 \
+  -e LUNAZ_API_KEY="$LUNAZ_API_KEY" \
+  --restart unless-stopped lunaz-demo
 ```
 
-## Styling
+Compose:
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Remove `@tailwindcss/vite` and `tailwindcss` from `package.json`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-bun --bun run lint
-bun --bun run format
-bun --bun run check
+```yaml
+services:
+  demo:
+    build:
+      context: .
+      args:
+        VITE_LUNAZ_WS_URL: wss://api.example.com
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 512m
+    ports: ["127.0.0.1:3000:3000"]
+    environment:
+      LUNAZ_API_URL: http://core:8080
+      LUNAZ_API_KEY: ${LUNAZ_API_KEY}
+    restart: unless-stopped
 ```
 
+## Deploy notes
 
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+- Terminate TLS in a reverse proxy and publish the container on `127.0.0.1` only.
+- The browser must reach core-service WebSocket at `VITE_LUNAZ_WS_URL`, so expose it publicly (as `wss://`). `LUNAZ_API_URL` can stay internal.
+- Changing `VITE_LUNAZ_WS_URL` requires a rebuild.
+- Anyone who can open the cashier page can create invoices with your key. Restrict access to `/` at the proxy.
