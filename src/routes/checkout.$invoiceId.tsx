@@ -168,6 +168,29 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	const expired = status === "expired" || (status === "pending" && left === 0);
 	const uri = invoice.zip321_uri ?? z;
 	const cart = decodeCart(o);
+	const lines = (
+		<ul className="flex flex-col gap-4">
+			{cart.map((l) => (
+				<li key={l.id} className="flex items-center gap-3">
+					<span
+						style={{ background: l.tint }}
+						className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+					>
+						<ProductArt id={l.id} className="h-10 w-10" />
+					</span>
+					<span className="min-w-0 flex-1">
+						<span className="block truncate text-sm font-semibold">
+							{l.name}
+						</span>
+						<span className="block text-xs text-kertas/50">Qty {l.qty}</span>
+					</span>
+					<span className="text-sm font-semibold tnum">
+						{zec(l.zat * l.qty)}
+					</span>
+				</li>
+			))}
+		</ul>
+	);
 
 	if (status === "paid") {
 		return (
@@ -231,32 +254,22 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 						</p>
 					</div>
 					{cart.length > 0 && (
-						<ul className="flex flex-col gap-4">
-							{cart.map((l) => (
-								<li key={l.id} className="flex items-center gap-3">
-									<span
-										style={{ background: l.tint }}
-										className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
-									>
-										<ProductArt id={l.id} className="h-10 w-10" />
-									</span>
-									<span className="min-w-0 flex-1">
-										<span className="block truncate text-sm font-semibold">
-											{l.name}
-										</span>
-										<span className="block text-xs text-kertas/50">
-											Qty {l.qty}
-										</span>
-									</span>
-									<span className="text-sm font-semibold tnum">
-										{zec(l.zat * l.qty)}
-									</span>
-								</li>
-							))}
-						</ul>
+						<>
+							<details className="group rounded-2xl bg-kertas/[0.06] lg:hidden">
+								<summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-semibold">
+									Order summary · {cart.reduce((t, l) => t + l.qty, 0)} items
+									<Icon
+										name="back"
+										className="h-4 w-4 -rotate-90 transition-transform duration-200 group-open:rotate-90"
+									/>
+								</summary>
+								<div className="px-4 pb-4">{lines}</div>
+							</details>
+							<div className="hidden lg:block">{lines}</div>
+						</>
 					)}
 					<dl className="flex flex-col text-sm">
-						<div className="flex justify-between gap-4 border-t border-kertas/10 py-3">
+						<div className="hidden justify-between gap-4 border-t border-kertas/10 py-3 lg:flex">
 							<dt className="text-kertas/60">Invoice</dt>
 							<dd className="font-mono">{short(invoice.id, 6)}</dd>
 						</div>
@@ -400,7 +413,27 @@ function Panel({
 	const partial = detected && received > 0 && received < invoice.amount_zat;
 	return (
 		<>
-			<h1 className="text-xl font-bold">Pay with</h1>
+			<div className="flex items-center justify-between gap-3">
+				<h1 className="text-xl font-bold">Pay with</h1>
+				<p
+					aria-live="polite"
+					className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors duration-300 ${detected ? "bg-malam text-kertas" : "bg-malam/[0.06]"}`}
+				>
+					<Dot tone={detected ? "lunas" : "malam"} />
+					{detected
+						? "Payment detected · confirming"
+						: link === "live"
+							? "Waiting for payment"
+							: "Reconnecting…"}
+				</p>
+			</div>
+			{partial && (
+				<p className="rise -mt-2 text-sm text-malam/80">
+					Received <b className="tnum">{zec(received)}</b> so far. Send the
+					remaining <b className="tnum">{zec(invoice.amount_zat - received)}</b>{" "}
+					to the same address.
+				</p>
+			)}
 			<Tabs value={tab} onChange={setTab} />
 			<div
 				role="tabpanel"
@@ -418,24 +451,6 @@ function Panel({
 			>
 				<OtherTab invoice={invoice} usd={usd} swapStatus={swapStatus} />
 			</div>
-			<div
-				className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-colors duration-300 ${detected ? "bg-malam text-kertas" : "bg-malam/[0.05]"}`}
-			>
-				<Dot tone={detected ? "lunas" : "malam"} />
-				<span className="flex-1" aria-live="polite">
-					{detected ? "Payment detected · confirming" : "Waiting for payment"}
-				</span>
-				{link !== "live" && (
-					<span className="text-xs font-medium opacity-60">Reconnecting…</span>
-				)}
-			</div>
-			{partial && (
-				<p className="rise -mt-2 text-sm text-malam/80">
-					Received <b className="tnum">{zec(received)}</b> so far. Send the
-					remaining <b className="tnum">{zec(invoice.amount_zat - received)}</b>{" "}
-					to the same address.
-				</p>
-			)}
 		</>
 	);
 }
@@ -592,7 +607,12 @@ function OtherTab({
 				}),
 			);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Something went wrong");
+			const m = err instanceof Error ? err.message : "";
+			setError(
+				/refund/i.test(m)
+					? `The refund address was rejected. Use a ${chain?.name ?? ""} address you control.`
+					: m || "Something went wrong. Try again.",
+			);
 			setBusy(false);
 		}
 	};
@@ -666,7 +686,7 @@ function OtherTab({
 					aria-invalid={badRefund}
 					aria-describedby="refund-hint"
 					placeholder={chain ? chain.hint : "Pick an asset first"}
-					className={`${field} font-mono text-sm ${badRefund ? "ring-2 ring-danger-ink" : ""}`}
+					className={`${field} font-mono text-sm aria-invalid:ring-2 aria-invalid:ring-danger-ink`}
 				/>
 				<span
 					id="refund-hint"
