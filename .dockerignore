@@ -1,0 +1,12 @@
+.env*
+node_modules
+.output
+dist
+dist-ssr
+.git
+.tanstack
+.vscode
+*.log
+logs
+Dockerfile
+.dockerignore
