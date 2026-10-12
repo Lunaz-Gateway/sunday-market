@@ -25,7 +25,7 @@ function Stepper({
 	const b =
 		"press grid h-11 w-11 place-items-center rounded-xl text-xl font-bold hover:bg-malam/5 active:bg-malam/10";
 	return (
-		<div className="flex items-center rounded-2xl border border-malam/15 p-0.5">
+		<div className="flex min-h-12 items-center justify-between rounded-2xl border border-malam/15 p-0.5">
 			<button
 				type="button"
 				aria-label={`Remove one ${name}`}
@@ -36,7 +36,7 @@ function Stepper({
 			</button>
 			<output
 				aria-label={`${name} quantity`}
-				className="w-8 text-center font-bold tnum"
+				className="flex-1 text-center font-bold tnum"
 			>
 				{n}
 			</output>
@@ -164,20 +164,23 @@ function Store() {
 										style={{ background: p.tint }}
 										className="px-8 pt-6 pb-2"
 									>
-										<ProductArt id={p.id} className="mx-auto h-36 w-full" />
+										<ProductArt
+											id={p.id}
+											className="mx-auto h-28 w-full sm:h-36"
+										/>
 									</div>
 									<div className="flex flex-1 flex-col gap-4 p-5">
 										<div>
 											<h2 className="text-lg font-bold">{p.name}</h2>
 											<p className="text-sm text-malam/60">{p.note}</p>
 										</div>
-										<div className="mt-auto flex items-end justify-between gap-3">
-											<div>
-												<p className="font-bold tnum">{zec(p.zat)}</p>
-												<p className="h-5 text-sm text-malam/50 tnum">
+										<div className="mt-auto flex flex-col gap-3">
+											<p className="flex items-baseline gap-2 whitespace-nowrap">
+												<span className="font-bold tnum">{zec(p.zat)}</span>
+												<span className="text-sm text-malam/50 tnum">
 													{fiat(p.zat, usd)}
-												</p>
-											</div>
+												</span>
+											</p>
 											{n > 0 ? (
 												<Stepper
 													name={p.name}
@@ -188,7 +191,7 @@ function Store() {
 												<button
 													type="button"
 													onClick={() => add(p.id, 1)}
-													className={`${btn.ink} min-h-12 px-5`}
+													className={`${btn.ink} min-h-12 w-full`}
 												>
 													Add
 												</button>
