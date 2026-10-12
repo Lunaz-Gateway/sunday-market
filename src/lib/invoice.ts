@@ -18,6 +18,9 @@ export const createInvoice = createServerFn({ method: "POST" })
 	})
 	.handler(async ({ data }): Promise<Invoice> => {
 		const base = process.env.LUNAZ_API_URL ?? "http://127.0.0.1:8099";
+		if (!process.env.LUNAZ_API_KEY) {
+			throw new Error("This terminal has no merchant key configured.");
+		}
 		const res = await fetch(`${base}/v1/invoices`, {
 			method: "POST",
 			headers: {
@@ -25,8 +28,22 @@ export const createInvoice = createServerFn({ method: "POST" })
 				authorization: `Bearer ${process.env.LUNAZ_API_KEY}`,
 			},
 			body: JSON.stringify({ amount_zat: data.amountZat }),
+			signal: AbortSignal.timeout(10_000),
+		}).catch(() => {
+			throw new Error(
+				"Can't reach the payment server. Check the connection and try again.",
+			);
 		});
-		if (!res.ok) throw new Error(`Could not create invoice (${res.status})`);
+		if (res.status === 401 || res.status === 403) {
+			throw new Error(
+				"The merchant key was rejected. Ask the store owner to update it.",
+			);
+		}
+		if (!res.ok) {
+			throw new Error(
+				`The payment server couldn't create the invoice (${res.status}). Try again.`,
+			);
+		}
 		return res.json();
 	});
 

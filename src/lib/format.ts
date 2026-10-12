@@ -11,3 +11,16 @@ export const partialText = (got: number, total: number) =>
 
 export const underpaidText = (got: number, total: number) =>
 	`Received ${zec(got)} of ${zec(total)}. The merchant will contact you about a refund.`;
+
+const usdFmt = new Intl.NumberFormat("en-US", {
+	style: "currency",
+	currency: "USD",
+});
+
+export const fiat = (zat: number, usdPerZec: number | null) =>
+	usdPerZec ? `≈ ${usdFmt.format((zat / ZAT) * usdPerZec)}` : "";
+
+export const usd = (n: number) => usdFmt.format(n);
+
+export const clock = (secs: number) =>
+	`${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;

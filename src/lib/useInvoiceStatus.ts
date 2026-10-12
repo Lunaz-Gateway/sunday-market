@@ -7,12 +7,16 @@ export function useInvoiceStatus(id: string, initial = "pending") {
 	const [state, setState] = useState<{ status: string; swap?: string }>({
 		status: initial,
 	});
+	const [link, setLink] = useState<"connecting" | "live" | "reconnecting">(
+		"connecting",
+	);
 	useEffect(() => {
 		let ws: WebSocket | undefined;
 		let timer: ReturnType<typeof setTimeout>;
 		let final = false;
 		const connect = () => {
 			ws = new WebSocket(`${WS_URL}/v1/invoices/${id}/ws`);
+			ws.onopen = () => setLink("live");
 			ws.onmessage = (e) => {
 				const m = JSON.parse(e.data);
 				setState({ status: m.status, swap: m.swap_status ?? undefined });
@@ -20,7 +24,9 @@ export function useInvoiceStatus(id: string, initial = "pending") {
 			};
 			// The first message after a reconnect re-syncs state.
 			ws.onclose = () => {
-				if (!final) timer = setTimeout(connect, 1500);
+				if (final) return;
+				setLink("reconnecting");
+				timer = setTimeout(connect, 1500);
 			};
 		};
 		connect();
@@ -49,5 +55,5 @@ export function useInvoiceStatus(id: string, initial = "pending") {
 		const t = setInterval(load, 10_000);
 		return () => clearInterval(t);
 	}, [id, status]);
-	return { ...state, ...amounts };
+	return { ...state, ...amounts, link };
 }
