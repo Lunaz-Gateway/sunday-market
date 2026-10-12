@@ -10,4 +10,4 @@ export const partialText = (got: number, total: number) =>
 	`Partial payment received: ${zec(got)} of ${zec(total)}. Send the remaining ${zec(total - got)} to the same address.`;
 
 export const underpaidText = (got: number, total: number) =>
-	`Partially paid: received ${zec(got)} of ${zec(total)}. The merchant will contact you about a refund.`;
+	`Received ${zec(got)} of ${zec(total)}. The merchant will contact you about a refund.`;
