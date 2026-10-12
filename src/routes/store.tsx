@@ -20,7 +20,7 @@ const PRODUCTS = [
 		id: "v60",
 		name: "V60 Filter Pack",
 		note: "40 paper filters",
-		zat: 120_000,
+		zat: 100_000,
 	},
 	{
 		id: "beans",
