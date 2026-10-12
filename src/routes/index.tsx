@@ -1,12 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { Logo } from "#/components/Logo";
+import { short, ZAT, zec } from "#/lib/format";
 import { createInvoice, getInvoice, type Invoice } from "#/lib/invoice";
+import { useInvoiceStatus } from "#/lib/useInvoiceStatus";
 
 export const Route = createFileRoute("/")({ component: Cashier });
 
-const WS_URL = import.meta.env.VITE_LUNAZ_WS_URL ?? "ws://127.0.0.1:8099";
-const ZAT = 100_000_000;
 const QUICK = ["0.01", "0.05", "0.1", "0.5", "1"];
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "<"];
 
@@ -14,11 +15,6 @@ function toZat(amount: string) {
 	const [whole, frac = ""] = amount.split(".");
 	return Number(whole || "0") * ZAT + Number(frac.padEnd(8, "0"));
 }
-
-const zec = (zat: number) =>
-	`${(zat / ZAT).toFixed(8).replace(/\.?0+$/, "")} ZEC`;
-const short = (s: string, n = 8) =>
-	s.length > 2 * n + 1 ? `${s.slice(0, n)}…${s.slice(-n)}` : s;
 
 function Cashier() {
 	const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -30,16 +26,6 @@ function Cashier() {
 				<Entry onCreated={setInvoice} />
 			)}
 		</main>
-	);
-}
-
-function Logo() {
-	return (
-		<img
-			src="/lunaz-horizontal-on-dark.svg"
-			alt="Lunaz"
-			className="h-8 w-auto"
-		/>
 	);
 }
 
@@ -129,34 +115,6 @@ function Entry({ onCreated }: { onCreated: (i: Invoice) => void }) {
 	);
 }
 
-function useInvoiceStatus(id: string) {
-	const [status, setStatus] = useState("pending");
-	useEffect(() => {
-		let ws: WebSocket | undefined;
-		let timer: ReturnType<typeof setTimeout>;
-		let final = false;
-		const connect = () => {
-			ws = new WebSocket(`${WS_URL}/v1/invoices/${id}/ws`);
-			ws.onmessage = (e) => {
-				const s = JSON.parse(e.data).status as string;
-				setStatus(s);
-				final = s === "paid" || s === "expired";
-			};
-			// The first message after a reconnect re-syncs state.
-			ws.onclose = () => {
-				if (!final) timer = setTimeout(connect, 1500);
-			};
-		};
-		connect();
-		return () => {
-			final = true;
-			clearTimeout(timer);
-			ws?.close();
-		};
-	}, [id]);
-	return status;
-}
-
 function InvoiceView({
 	invoice,
 	onDone,
@@ -164,7 +122,7 @@ function InvoiceView({
 	invoice: Invoice;
 	onDone: () => void;
 }) {
-	const status = useInvoiceStatus(invoice.id);
+	const { status } = useInvoiceStatus(invoice.id);
 	const [now, setNow] = useState(() => Date.now() / 1000);
 	const [qr, setQr] = useState("");
 	const [txid, setTxid] = useState<string | null>(null);
@@ -261,6 +219,14 @@ function InvoiceView({
 							? "Payment detected, waiting for confirmation"
 							: "Waiting for payment"}
 					</output>
+					<Link
+						to="/checkout/$invoiceId"
+						params={{ invoiceId: invoice.id }}
+						search={{ z: invoice.zip321_uri }}
+						className="text-sm underline underline-offset-4 opacity-80"
+					>
+						Pay with another asset
+					</Link>
 					<button
 						type="button"
 						onClick={onDone}

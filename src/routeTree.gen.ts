@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StoreRouteImport } from './routes/store'
+import { Route as CheckoutInvoiceIdRouteImport } from './routes/checkout.$invoiceId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StoreRoute = StoreRouteImport.update({
+  id: '/store',
+  path: '/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutInvoiceIdRoute = CheckoutInvoiceIdRouteImport.update({
+  id: '/checkout/$invoiceId',
+  path: '/checkout/$invoiceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/store': typeof StoreRoute
+  '/checkout/$invoiceId': typeof CheckoutInvoiceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/store': typeof StoreRoute
+  '/checkout/$invoiceId': typeof CheckoutInvoiceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/store': typeof StoreRoute
+  '/checkout/$invoiceId': typeof CheckoutInvoiceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/store' | '/checkout/$invoiceId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/store' | '/checkout/$invoiceId'
+  id: '__root__' | '/' | '/store' | '/checkout/$invoiceId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  StoreRoute: typeof StoreRoute
+  CheckoutInvoiceIdRoute: typeof CheckoutInvoiceIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/store': {
+      id: '/store'
+      path: '/store'
+      fullPath: '/store'
+      preLoaderRoute: typeof StoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/$invoiceId': {
+      id: '/checkout/$invoiceId'
+      path: '/checkout/$invoiceId'
+      fullPath: '/checkout/$invoiceId'
+      preLoaderRoute: typeof CheckoutInvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  StoreRoute: StoreRoute,
+  CheckoutInvoiceIdRoute: CheckoutInvoiceIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
