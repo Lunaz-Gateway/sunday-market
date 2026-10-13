@@ -7,7 +7,7 @@ import {
 	Stepper,
 } from "#/components/Market";
 import { ProductArt } from "#/components/ProductArt";
-import { Icon } from "#/components/ui";
+import { Icon, toast } from "#/components/ui";
 import { countOf, setQty, useCart } from "#/lib/cart";
 import {
 	type Line,
@@ -123,11 +123,22 @@ function ShopGroup({
 								{l.name}
 							</Link>
 							<p className="truncate text-sm text-stone-500">{l.note}</p>
+							<button
+								type="button"
+								onClick={() => {
+									setQty(l.id, 0);
+									toast(`${l.name} removed`);
+								}}
+								className="-ml-2 min-h-10 rounded-lg px-2 text-sm font-semibold text-stone-600 hover:text-red-700"
+							>
+								Remove<span className="sr-only"> {l.name}</span>
+							</button>
 						</div>
 						<div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1">
 							<Stepper
 								name={l.name}
 								n={l.qty}
+								min={1}
 								onChange={(n) => setQty(l.id, n)}
 							/>
 							<span className="font-semibold tnum sm:hidden">
