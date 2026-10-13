@@ -37,7 +37,11 @@ export function useInvoiceStatus(id: string, initial = "pending") {
 		};
 	}, [id]);
 	// Amounts come from REST: refetch on status change, poll while detected.
-	const [amounts, setAmounts] = useState({ received: 0, overpaid: 0 });
+	const [amounts, setAmounts] = useState<{
+		received: number;
+		overpaid: number;
+		txid?: string | null;
+	}>({ received: 0, overpaid: 0 });
 	const { status } = state;
 	useEffect(() => {
 		if (status === "pending" || status === "expired") return;
@@ -47,6 +51,7 @@ export function useInvoiceStatus(id: string, initial = "pending") {
 					setAmounts({
 						received: i.received_zat ?? 0,
 						overpaid: i.overpaid_zat ?? 0,
+						txid: i.txid,
 					}),
 				)
 				.catch(() => {});

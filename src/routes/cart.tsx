@@ -1,17 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-	ErrorNote,
 	MarketShell,
 	mbtn,
 	Price,
 	ShopAvatar,
-	Spinner,
 	Stepper,
-	useCheckout,
 } from "#/components/Market";
 import { ProductArt } from "#/components/ProductArt";
 import { Icon } from "#/components/ui";
-import { type Cart, countOf, setQty, useCart } from "#/lib/cart";
+import { countOf, setQty, useCart } from "#/lib/cart";
 import {
 	type Line,
 	MARKET,
@@ -84,9 +81,7 @@ function ShopGroup({
 	lines: Line[];
 	usd: number | null;
 }) {
-	const { go, busy, error } = useCheckout();
 	const total = totalOf(lines);
-	const qty: Cart = Object.fromEntries(lines.map((l) => [l.id, l.qty]));
 	return (
 		<section
 			aria-label={shop.name}
@@ -156,27 +151,14 @@ function ShopGroup({
 						</span>
 					)}
 				</div>
-				<div className="flex flex-col gap-2 sm:min-w-72">
-					<ErrorNote text={error} />
-					<button
-						type="button"
-						disabled={busy}
-						onClick={() => go(shop.slug, qty)}
-						className={`${mbtn.primary} min-h-14 w-full whitespace-nowrap`}
-					>
-						{busy ? (
-							<>
-								<Spinner />
-								Preparing checkout…
-							</>
-						) : (
-							<>
-								<Icon name="lock" className="h-5 w-5" />
-								Checkout with {shop.name}
-							</>
-						)}
-					</button>
-				</div>
+				<Link
+					to="/checkout"
+					search={{ seller: shop.slug }}
+					className={`${mbtn.primary} min-h-14 w-full whitespace-nowrap sm:w-auto sm:min-w-72`}
+				>
+					<Icon name="lock" className="h-5 w-5" />
+					Checkout with {shop.name}
+				</Link>
 			</div>
 		</section>
 	);

@@ -1,10 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Logo } from "#/components/Logo";
-import { ProductArt } from "#/components/ProductArt";
+import {
+	CheckoutShell,
+	type OrderRecord,
+	OrderSummary,
+	readOrder,
+} from "#/components/Checkout";
+import { mbtn } from "#/components/Market";
 import { btn, CopyButton, Dot, Icon, QrCode, useNow } from "#/components/ui";
 import { removeFromCart } from "#/lib/cart";
-import { decodeLines, MARKET, MIN_SWAP_ZAT, shopOf } from "#/lib/catalog";
+import {
+	decodeLines,
+	type Line,
+	MARKET,
+	MIN_SWAP_ZAT,
+	type Shop,
+	shopOf,
+} from "#/lib/catalog";
 import { clock, fiat, short, underpaidText, ZAT, zec } from "#/lib/format";
 import {
 	createSwap,
@@ -19,17 +31,18 @@ import { useInvoiceStatus } from "#/lib/useInvoiceStatus";
 
 export const Route = createFileRoute("/checkout/$invoiceId")({
 	// z: ZIP-321 URI handed over by the creator (GET /v1/invoices lacks it).
-	// o: cart lines for the order summary. s: seller slug.
+	// o: order lines for the summary. s: seller slug. m: chosen payment method.
 	validateSearch: (s: Record<string, unknown>) => ({
 		z: typeof s.z === "string" && s.z.startsWith("zcash:") ? s.z : undefined,
 		o: typeof s.o === "string" ? s.o : undefined,
 		s: typeof s.s === "string" ? s.s : undefined,
+		m: s.m === "other" ? ("other" as const) : undefined,
 	}),
 	loader: ({ params }) => loadInvoice({ data: { id: params.invoiceId } }),
 	head: ({ match }) => ({
 		meta: [
 			{
-				title: `Pay ${shopOf(match.search.s ?? "")?.name ?? MARKET} · Lunaz`,
+				title: `Pay ${shopOf(match.search.s ?? "")?.name ?? "your order"} · ${MARKET}`,
 			},
 		],
 	}),
@@ -134,42 +147,29 @@ function Checkout() {
 	const invoice = Route.useLoaderData();
 	if (!invoice) {
 		return (
-			<main className="flex min-h-dvh flex-col p-6">
-				<Logo />
-				<div className="rise m-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
-					<h1 className="text-4xl font-extrabold tracking-tight">
-						Invoice not found
+			<CheckoutShell step={2}>
+				<div className="rise flex flex-col items-center gap-3 rounded-3xl bg-white px-6 py-14 text-center ring-1 ring-stone-200">
+					<h1 className="text-2xl font-extrabold tracking-tight">
+						Order not found
 					</h1>
-					<p className="text-kertas/70">
+					<p className="max-w-sm text-stone-500">
 						This payment link is invalid or has been removed. Nothing was
 						charged.
 					</p>
-					<Link to="/" className={`${btn.lunas} mt-4`}>
-						Return to marketplace
+					<Link to="/" className={`${mbtn.primary} mt-2`}>
+						Continue shopping
 					</Link>
 				</div>
-			</main>
+			</CheckoutShell>
 		);
 	}
 	return <Page invoice={invoice} />;
 }
 
-function Footer({ light = false }: { light?: boolean }) {
-	return (
-		<p
-			className={`flex items-center justify-center gap-1.5 text-xs font-medium ${light ? "text-malam/50" : "text-kertas/50"}`}
-		>
-			<Icon name="lock" className="h-3.5 w-3.5" />
-			Secured by Lunaz · non-custodial
-		</p>
-	);
-}
-
 function Page({ invoice }: { invoice: InvoiceDetail }) {
-	const { z, o, s } = Route.useSearch();
-	const shop = useShopName();
-	const STORE = shop ?? "the merchant";
-	const { status, swap, received, overpaid, link } = useInvoiceStatus(
+	const { z, o, s, m } = Route.useSearch();
+	const shop = shopOf(s ?? "");
+	const { status, swap, received, overpaid, txid, link } = useInvoiceStatus(
 		invoice.id,
 		invoice.status,
 	);
@@ -178,149 +178,63 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	const left = Math.max(0, Math.floor(invoice.expires_at - now / 1000));
 	const expired = status === "expired" || (status === "pending" && left === 0);
 	const uri = invoice.zip321_uri ?? z;
-	const cart = decodeLines(o);
-	// Paid lines leave the marketplace cart.
+	const lines = decodeLines(o);
+	const paid = status === "paid";
+	// Buyer details live only in this browser (saved when the order was placed).
+	const [rec, setRec] = useState<OrderRecord | null>(null);
+	useEffect(() => setRec(readOrder(invoice.id)), [invoice.id]);
+	// Paid lines leave the cart (Buy now orders never touched it).
 	useEffect(() => {
-		if (status === "paid") removeFromCart(decodeLines(o).map((l) => l.id));
-	}, [status, o]);
-	const lines = (
-		<ul className="flex flex-col gap-4">
-			{cart.map((l) => (
-				<li key={l.id} className="flex items-center gap-3">
-					<span
-						style={{ background: l.tint }}
-						className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
+		if (paid && !readOrder(invoice.id)?.buyNow)
+			removeFromCart(decodeLines(o).map((l) => l.id));
+	}, [paid, o, invoice.id]);
+
+	const summary = (
+		<OrderSummary shop={shop} lines={lines} usd={usd}>
+			<div className="flex justify-between gap-4">
+				<dt className="text-stone-500">Order</dt>
+				<dd className="font-mono text-xs leading-5">#{orderNo(invoice.id)}</dd>
+			</div>
+			{!paid && (
+				<div className="flex justify-between gap-4">
+					<dt className="text-stone-500">Pay within</dt>
+					<dd
+						suppressHydrationWarning
+						className={`font-semibold tnum ${!expired && left < 120 ? "text-danger-ink" : ""}`}
 					>
-						<ProductArt art={l.art} accent={l.accent} className="h-10 w-10" />
-					</span>
-					<span className="min-w-0 flex-1">
-						<span className="block truncate text-sm font-semibold">
-							{l.name}
-						</span>
-						<span className="block text-xs text-kertas/50">Qty {l.qty}</span>
-					</span>
-					<span className="text-sm font-semibold tnum">
-						{zec(l.zat * l.qty)}
-					</span>
-				</li>
-			))}
-		</ul>
+						{expired ? "Expired" : clock(left)}
+					</dd>
+				</div>
+			)}
+		</OrderSummary>
 	);
 
-	if (status === "paid") {
-		return (
-			<main className="flex min-h-dvh flex-col items-center justify-center gap-6 overflow-hidden px-4 py-10 text-center">
-				<p className="rise flex items-center gap-2 rounded-full bg-lunas/10 px-4 py-2 text-sm font-bold text-lunas">
-					<span className="grid h-5 w-5 place-items-center rounded-full bg-lunas text-malam">
-						<Icon name="check" className="h-3.5 w-3.5" />
-					</span>
-					Payment received
-				</p>
-				<div className="relative grid place-items-center">
-					<span
-						aria-hidden="true"
-						className="ripple absolute aspect-square w-[min(90vw,32rem)] rounded-full bg-lunas/30"
-					/>
-					<h1 className="stamp relative text-[clamp(4.5rem,20vw,11rem)] leading-none font-extrabold tracking-[-0.03em] text-lunas">
-						LUNAS
-					</h1>
-				</div>
-				<div className="rise flex flex-col items-center gap-1 [animation-delay:250ms]">
-					<p className="text-3xl font-extrabold tnum">
-						{zec(invoice.amount_zat)}
-					</p>
-					<p className="h-6 text-kertas/60 tnum">
-						{fiat(invoice.amount_zat, usd)}
-					</p>
-					{overpaid > 0 && (
-						<p className="mt-2 rounded-full bg-kertas/10 px-4 py-1.5 text-sm font-semibold">
-							Overpaid by {zec(overpaid)}. {shop ?? "The merchant"} will refund
-							the difference.
-						</p>
-					)}
-					<p className="mt-3 max-w-sm text-kertas/70">
-						Payment received by {STORE}. Thank you for your order!
-					</p>
-				</div>
-				<Link
-					to="/"
-					className={`${btn.lunas} rise mt-2 min-w-64 text-lg [animation-delay:400ms]`}
-				>
-					Return to marketplace
-				</Link>
-				<div className="mt-6">
-					<Footer />
-				</div>
-			</main>
-		);
-	}
-
 	return (
-		<div className="grid min-h-dvh lg:grid-cols-2">
-			<section className="px-5 pt-6 pb-8 sm:px-10 lg:flex lg:justify-end lg:py-16">
-				<div className="flex w-full max-w-md flex-col gap-6 lg:mr-6">
-					<Link
-						to={s ? "/shop/$slug" : "/"}
-						params={{ slug: s ?? "" }}
-						className="press -ml-2 flex min-h-11 items-center gap-1 self-start rounded-xl px-2 text-sm font-semibold text-kertas/70 hover:text-kertas"
-					>
-						<Icon name="back" className="h-4 w-4" />
-						{shop ?? MARKET}
-					</Link>
+		<CheckoutShell step={paid ? 3 : 2} aside={paid ? undefined : summary}>
+			{paid ? (
+				<Confirmed
+					invoice={invoice}
+					shop={shop}
+					lines={lines}
+					usd={usd}
+					overpaid={overpaid}
+					txid={txid ?? invoice.txid}
+					email={rec?.email}
+				/>
+			) : (
+				<section className="on-light rise flex flex-col gap-6 rounded-3xl bg-white p-5 text-malam ring-1 ring-stone-200 sm:p-8">
 					<div>
-						<p className="font-medium text-kertas/60">
-							Pay {STORE}
-							{s && <span className="text-kertas/40"> · via {MARKET}</span>}
+						<p className="text-sm font-medium text-stone-500">
+							Pay {shop?.name ?? "the shop"}
+							<span className="text-stone-400"> · via {MARKET}</span>
 						</p>
-						<p className="mt-1 text-4xl font-extrabold tracking-tight tnum sm:text-5xl">
+						<p className="mt-1 text-4xl font-extrabold tracking-tight tnum">
 							{zec(invoice.amount_zat)}
 						</p>
-						<p className="mt-1 h-6 text-kertas/60 tnum">
+						<p className="mt-0.5 h-6 text-stone-500 tnum">
 							{fiat(invoice.amount_zat, usd)}
 						</p>
 					</div>
-					{cart.length > 0 && (
-						<>
-							<details className="group rounded-2xl bg-kertas/[0.06] lg:hidden">
-								<summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-semibold">
-									Order summary · {cart.reduce((t, l) => t + l.qty, 0)} items
-									<Icon
-										name="back"
-										className="h-4 w-4 -rotate-90 transition-transform duration-200 group-open:rotate-90"
-									/>
-								</summary>
-								<div className="px-4 pb-4">{lines}</div>
-							</details>
-							<div className="hidden lg:block">{lines}</div>
-						</>
-					)}
-					<dl className="flex flex-col text-sm">
-						<div className="hidden justify-between gap-4 border-t border-kertas/10 py-3 lg:flex">
-							<dt className="text-kertas/60">Invoice</dt>
-							<dd className="font-mono">{short(invoice.id, 6)}</dd>
-						</div>
-						<div className="flex justify-between gap-4 border-t border-kertas/10 py-3">
-							<dt className="text-kertas/60">Expires in</dt>
-							<dd
-								suppressHydrationWarning
-								className={`font-semibold tnum ${!expired && left < 120 ? "text-danger" : ""}`}
-							>
-								{expired ? "Expired" : clock(left)}
-							</dd>
-						</div>
-						<div className="flex justify-between gap-4 border-t border-kertas/10 py-3 font-bold">
-							<dt>Total due</dt>
-							<dd className="tnum">{zec(invoice.amount_zat)}</dd>
-						</div>
-					</dl>
-					<div className="hidden lg:mt-auto lg:block">
-						<Logo />
-					</div>
-				</div>
-			</section>
-
-			<section className="on-light bg-kertas px-5 pt-8 pb-8 text-malam sm:px-10 lg:py-16 lg:shadow-[-24px_0_60px_-30px_rgba(0,0,0,0.5)]">
-				<div className="mx-auto flex w-full max-w-md flex-col gap-6 lg:mx-0 lg:ml-6">
 					{status === "underpaid" ? (
 						<Notice
 							title="Partially paid"
@@ -328,8 +242,8 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 						/>
 					) : expired ? (
 						<Notice
-							title="Invoice expired"
-							body="No payment arrived in time and nothing was charged. Return to the marketplace to start again."
+							title="Order expired"
+							body="No payment arrived in time and nothing was charged. You can place the order again."
 						/>
 					) : (
 						<Panel
@@ -340,9 +254,139 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 							swapStatus={swap}
 							received={received}
 							link={link}
+							method={m}
 						/>
 					)}
-					<Footer light />
+				</section>
+			)}
+		</CheckoutShell>
+	);
+}
+
+const orderNo = (id: string) => id.replace(/-/g, "").slice(0, 8).toUpperCase();
+
+function Confirmed({
+	invoice,
+	shop,
+	lines,
+	usd,
+	overpaid,
+	txid,
+	email,
+}: {
+	invoice: InvoiceDetail;
+	shop?: Shop;
+	lines: Line[];
+	usd: number | null;
+	overpaid: number;
+	txid: string | null;
+	email?: string;
+}) {
+	return (
+		<div className="mx-auto flex w-full max-w-xl flex-col gap-5">
+			<section
+				aria-labelledby="done"
+				className="relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl bg-malam px-6 pt-8 pb-7 text-center text-kertas"
+			>
+				<p
+					id="done"
+					className="rise flex items-center gap-2 rounded-full bg-lunas/10 px-4 py-1.5 text-sm font-bold text-lunas"
+				>
+					<span className="grid h-5 w-5 place-items-center rounded-full bg-lunas text-malam">
+						<Icon name="check" className="h-3.5 w-3.5" />
+					</span>
+					Order confirmed
+				</p>
+				<div className="relative grid place-items-center py-2">
+					<span
+						aria-hidden="true"
+						className="ripple absolute aspect-square w-[min(80vw,22rem)] rounded-full bg-lunas/30"
+					/>
+					<h1 className="stamp relative text-[clamp(4rem,16vw,7.5rem)] leading-none font-extrabold tracking-[-0.03em] text-lunas">
+						LUNAS
+					</h1>
+				</div>
+				<p className="rise text-xs text-kertas/60 [animation-delay:200ms]">
+					Lunas means paid in full.
+				</p>
+				<p className="rise mt-2 text-3xl font-extrabold tnum [animation-delay:250ms]">
+					{zec(invoice.amount_zat)}
+				</p>
+				<p className="h-5 text-sm text-kertas/60 tnum">
+					{fiat(invoice.amount_zat, usd)}
+				</p>
+				{overpaid > 0 && (
+					<p className="mt-2 rounded-full bg-kertas/10 px-4 py-1.5 text-sm font-semibold">
+						Overpaid by {zec(overpaid)}. {shop?.name ?? "The shop"} will refund
+						the difference.
+					</p>
+				)}
+			</section>
+			<section className="rise flex flex-col gap-4 rounded-3xl bg-white p-5 ring-1 ring-stone-200 [animation-delay:300ms] sm:p-6">
+				<p className="text-sm text-stone-600">
+					Thanks for your order! {shop?.name ?? "The shop"} has been paid
+					{email ? (
+						<>
+							. A receipt would go to <b className="text-stone-900">{email}</b>{" "}
+							(demo: no email is sent).
+						</>
+					) : (
+						"."
+					)}
+				</p>
+				<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+					<dt className="text-stone-500">Order number</dt>
+					<dd className="text-right font-mono">#{orderNo(invoice.id)}</dd>
+					{shop && (
+						<>
+							<dt className="text-stone-500">Shop</dt>
+							<dd className="text-right font-semibold">{shop.name}</dd>
+						</>
+					)}
+					<dt className="text-stone-500">Paid</dt>
+					<dd className="text-right font-semibold tnum">
+						{zec(invoice.amount_zat)}
+					</dd>
+					{txid && (
+						<>
+							<dt className="text-stone-500">Transaction</dt>
+							<dd className="flex items-center justify-end gap-2 font-mono">
+								{short(txid, 6)}
+								<CopyButton
+									text={txid}
+									what="Transaction ID"
+									label="Copy transaction ID"
+									className="-my-2 bg-stone-100 hover:bg-stone-200"
+								/>
+							</dd>
+						</>
+					)}
+				</dl>
+				{lines.length > 0 && (
+					<ul className="flex flex-col gap-2 border-t border-stone-100 pt-4 text-sm">
+						{lines.map((l) => (
+							<li key={l.id} className="flex justify-between gap-3">
+								<span className="min-w-0 truncate">
+									{l.qty} × {l.name}
+								</span>
+								<span className="tnum">{zec(l.zat * l.qty)}</span>
+							</li>
+						))}
+					</ul>
+				)}
+				<div className="grid gap-3 pt-1 sm:grid-cols-2">
+					<Link to="/" className={`${mbtn.primary} min-h-14`}>
+						Continue shopping
+					</Link>
+					{shop && (
+						<Link
+							to="/shop/$slug"
+							params={{ slug: shop.slug }}
+							className={`${mbtn.outline} min-h-14`}
+						>
+							View shop
+						</Link>
+					)}
 				</div>
 			</section>
 		</div>
@@ -351,15 +395,20 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 
 function Notice({ title, body }: { title: string; body: string }) {
 	return (
-		<div className="rise flex flex-col items-center gap-4 py-10 text-center">
+		<div className="rise flex flex-col items-center gap-4 py-6 text-center">
 			<span className="grid h-14 w-14 place-items-center rounded-full bg-malam/5">
 				<Icon name="alert" className="h-7 w-7" />
 			</span>
-			<h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
+			<h2 className="text-2xl font-extrabold tracking-tight">{title}</h2>
 			<p className="text-malam/70">{body}</p>
-			<Link to="/" className={`${btn.ink} mt-2 min-w-56`}>
-				Return to marketplace
-			</Link>
+			<div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
+				<Link to="/cart" className={btn.ink}>
+					Back to cart
+				</Link>
+				<Link to="/" className={btn.ghostLight}>
+					Continue shopping
+				</Link>
+			</div>
 		</div>
 	);
 }
@@ -372,8 +421,8 @@ function Tabs({
 	onChange: (v: "zec" | "other") => void;
 }) {
 	const opts = [
-		{ v: "zec", label: "Zcash" },
-		{ v: "other", label: "Other assets" },
+		{ v: "zec", label: "Zcash (shielded)" },
+		{ v: "other", label: "Other crypto" },
 	] as const;
 	const refs = useRef<(HTMLButtonElement | null)[]>([]);
 	const i = value === "zec" ? 0 : 1;
@@ -424,6 +473,7 @@ function Panel({
 	swapStatus,
 	received,
 	link,
+	method,
 }: {
 	invoice: InvoiceDetail;
 	uri?: string;
@@ -432,16 +482,17 @@ function Panel({
 	swapStatus?: string;
 	received: number;
 	link: string;
+	method?: "other";
 }) {
 	const [tab, setTab] = useState<"zec" | "other">(
-		invoice.swap ? "other" : "zec",
+		invoice.swap || method === "other" ? "other" : "zec",
 	);
 	const detected = status === "detected";
 	const partial = detected && received > 0 && received < invoice.amount_zat;
 	return (
 		<>
 			<div className="flex items-center justify-between gap-3">
-				<h1 className="text-xl font-bold">Pay with</h1>
+				<h2 className="text-lg font-bold">Pay with</h2>
 				<p
 					aria-live="polite"
 					className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors duration-300 ${detected ? "bg-malam text-kertas" : "bg-malam/[0.06]"}`}
@@ -515,7 +566,8 @@ function ZecTab({ invoice, uri }: { invoice: InvoiceDetail; uri?: string }) {
 	if (!uri) {
 		return (
 			<p className="rounded-2xl bg-malam/5 p-4 text-sm">
-				Open this checkout from the marketplace to get a payment QR code.
+				The QR code is only shown on the device that placed the order. Send the
+				amount below to the address below from any Zcash wallet.
 			</p>
 		);
 	}
@@ -580,8 +632,8 @@ function OtherTab({
 	if (!quote && invoice.amount_zat < MIN_SWAP_ZAT) {
 		return (
 			<p className="rounded-2xl bg-malam/5 p-4 text-sm font-medium">
-				Paying with other assets needs an order of at least 0.001 ZEC. Use the
-				Zcash tab for this one.
+				Paying with other crypto needs an order of at least 0.001 ZEC. Use Zcash
+				(shielded) for this one.
 			</p>
 		);
 	}
@@ -603,7 +655,7 @@ function OtherTab({
 		return (
 			<div className="flex flex-col items-start gap-3 rounded-2xl bg-malam/5 p-4">
 				<p role="alert" className="text-sm font-medium">
-					Other assets are unavailable right now.
+					Other crypto is unavailable right now.
 				</p>
 				<button type="button" onClick={loadAssets} className={btn.ghostLight}>
 					Try again
@@ -884,8 +936,8 @@ function Deposit({
 			<p className="rounded-2xl bg-malam/[0.04] p-3 text-xs leading-relaxed text-malam/60">
 				Privacy: your {chainName(swap.blockchain)} deposit is public on that
 				chain and visible to the swap solver. The payment to{" "}
-				{shop ?? "the merchant"} settles in shielded ZEC, so the store never
-				sees your wallet.
+				{shop ?? "the shop"} settles in shielded ZEC, so the store never sees
+				your wallet.
 			</p>
 		</div>
 	);
@@ -893,21 +945,11 @@ function Deposit({
 
 function Skeleton() {
 	return (
-		<div className="grid min-h-dvh lg:grid-cols-2">
-			<section className="flex flex-col gap-4 px-5 pt-16 sm:px-10 lg:items-end">
-				<div className="flex w-full max-w-md flex-col gap-4 lg:mr-6">
-					<span className="skeleton h-4 w-32 rounded" />
-					<span className="skeleton h-12 w-56 rounded-lg" />
-					<span className="skeleton h-24 w-full rounded-2xl" />
-				</div>
-			</section>
-			<section className="bg-kertas px-5 pt-16 text-malam sm:px-10">
-				<div className="flex w-full max-w-md flex-col gap-4 lg:ml-6">
-					<span className="skeleton h-12 w-full rounded-2xl" />
-					<span className="skeleton mx-auto aspect-square w-full max-w-[17rem] rounded-2xl" />
-					<span className="skeleton h-14 w-full rounded-2xl" />
-				</div>
-			</section>
-		</div>
+		<CheckoutShell
+			step={2}
+			aside={<span className="skeleton block h-72 rounded-2xl" />}
+		>
+			<span className="skeleton block h-[32rem] rounded-3xl" />
+		</CheckoutShell>
 	);
 }

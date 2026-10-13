@@ -38,7 +38,7 @@ export type Product = {
 export const SHOPS: Shop[] = [
 	{
 		slug: "kedai-kopi-senja",
-		name: "Dusk Coffee Co.",
+		name: "Dusk Coffee",
 		tagline: "Small-batch coffee, roasted weekly",
 		city: "Bandung",
 		category: "kopi",

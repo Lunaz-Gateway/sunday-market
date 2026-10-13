@@ -1,17 +1,9 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
 import { ProductArt } from "#/components/ProductArt";
 import { Icon, toast } from "#/components/ui";
 import { addToCart, countOf, useCart } from "#/lib/cart";
-import {
-	encodeLines,
-	MARKET,
-	type Product,
-	type Shop,
-	shopOf,
-} from "#/lib/catalog";
+import { MARKET, type Product, type Shop, shopOf } from "#/lib/catalog";
 import { fiat, zec } from "#/lib/format";
-import { createOrder } from "#/lib/invoice";
 
 const base =
 	"press inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 font-bold disabled:cursor-not-allowed disabled:opacity-50";
@@ -210,30 +202,6 @@ export function ProductCard({
 			</div>
 		</li>
 	);
-}
-
-// One invoice per shop, created with that shop's own merchant key.
-export function useCheckout() {
-	const navigate = useNavigate();
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState("");
-	const go = async (seller: string, qty: Record<string, number>) => {
-		setBusy(true);
-		setError("");
-		const o = encodeLines(qty);
-		try {
-			const inv = await createOrder({ data: { seller, lines: o } });
-			await navigate({
-				to: "/checkout/$invoiceId",
-				params: { invoiceId: inv.id },
-				search: { z: inv.zip321_uri, o, s: seller },
-			});
-		} catch (e) {
-			setError(e instanceof Error ? e.message : "Something went wrong");
-			setBusy(false);
-		}
-	};
-	return { go, busy, error };
 }
 
 export function Spinner() {

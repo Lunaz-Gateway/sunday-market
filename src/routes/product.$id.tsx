@@ -2,16 +2,13 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useState } from "react";
 import {
 	add,
-	ErrorNote,
 	LunazBadge,
 	MarketShell,
 	mbtn,
 	Price,
 	ProductCard,
 	ShopAvatar,
-	Spinner,
 	Stepper,
-	useCheckout,
 } from "#/components/Market";
 import { ProductArt } from "#/components/ProductArt";
 import { Icon } from "#/components/ui";
@@ -47,7 +44,6 @@ function ProductPage() {
 	const shop = shopOf(p.shop)!;
 	const usd = useZecUsd();
 	const [n, setN] = useState(1);
-	const { go, busy, error } = useCheckout();
 	const more = productsOf(shop.slug).filter((x) => x.id !== p.id);
 
 	return (
@@ -96,23 +92,14 @@ function ProductPage() {
 							<Icon name="cart" className="h-5 w-5" />
 							Add to cart
 						</button>
-						<button
-							type="button"
-							disabled={busy}
-							onClick={() => go(shop.slug, { [p.id]: n })}
+						<Link
+							to="/checkout"
+							search={{ seller: shop.slug, buy: `${p.id}:${n}` }}
 							className={`${mbtn.primary} min-h-14`}
 						>
-							{busy ? (
-								<>
-									<Spinner />
-									Preparing checkout…
-								</>
-							) : (
-								"Buy now"
-							)}
-						</button>
+							Buy now
+						</Link>
 					</div>
-					<ErrorNote text={error} />
 					<div className="flex gap-3 rounded-2xl bg-white p-4 text-sm text-stone-600 ring-1 ring-stone-200">
 						<Icon name="lock" className="mt-0.5 h-5 w-5 shrink-0 text-pasar" />
 						<p>
