@@ -48,8 +48,9 @@ function cacheControl(path, status) {
 		)
 	)
 		return "no-store";
-	if (path.startsWith("/assets/") && status === 200)
-		return "public, max-age=31536000, immutable";
+	// A missing asset (e.g. mid-deploy) must never be cached by a CDN
+	if (path.startsWith("/assets/"))
+		return status === 200 ? "public, max-age=31536000, immutable" : "no-store";
 }
 
 async function secure(req, next) {
