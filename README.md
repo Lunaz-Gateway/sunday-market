@@ -4,15 +4,18 @@ Reference clients for the Lunaz Zcash payment gateway. Built with TanStack Start
 
 ## Pages
 
-Pasar Kita is a small multi-seller marketplace. Each shop is a separate Lunaz merchant with its own account, viewing key, wallet and API key. One gateway serves many merchants: an order from a shop creates an invoice with that shop's key, so the payment goes privately to that seller's wallet.
+Sunday Market is a small multi-seller marketplace. Each shop is a separate Lunaz merchant with its own account, viewing key, wallet and API key. One gateway serves many merchants: an order from a shop creates an invoice with that shop's key, so the payment goes privately to that seller's wallet.
 
 - `/` is the marketplace home: search, category chips, featured shops and all products. Search and category are kept in the URL (`?q=`, `?c=`).
 - `/shop/$slug` is a shop page. `/product/$id` is a product page with "Add to cart" and "Buy now".
-- `/cart` groups the cart by shop. Each shop has its own checkout button and its own invoice. The cart is kept in `localStorage`. Paid lines are removed when the checkout shows LUNAS.
-- `/checkout/$invoiceId` is a hosted checkout. It shows the seller, the order lines, a Zcash QR code and address, live status over WebSocket, and cross-chain payment via NEAR Intents (pay with another asset, swapped to ZEC, from 0.001 ZEC per invoice).
+- `/cart` groups the cart by shop. Each shop has its own checkout. The cart is kept in `localStorage`.
+- `/checkout?seller=<slug>` is the checkout, in steps: Cart, Details, Payment, Done. It reads the shop's lines from the cart (or `&buy=<id>:<qty>` from "Buy now").
+  - Details: optional email, name, address and note. This is a demo form: the values stay in the browser and are never sent to Lunaz or the shop.
+  - Payment (`&step=payment`): pick "Zcash (shielded)" or "Other crypto" (USDC, USDT, SOL, ETH or BTC via NEAR Intents, from 0.001 ZEC). "Place order" creates the invoice.
+- `/checkout/$invoiceId` is the payment page and the shareable, refresh-safe link for an order. It shows a Zcash QR code and address, live status over WebSocket, and the cross-chain deposit flow. When the payment is in, it shows the "Order confirmed — LUNAS" screen (lunas means paid in full) and removes the paid lines from the cart.
 - `/pos` (the old cashier) and `/store` redirect to `/`.
 
-Shops and products are defined in `src/lib/catalog.ts`. Prices are computed on the server from the catalog, so the browser can't change them.
+Shops and products are defined in `src/lib/catalog.ts`. Shop slugs are the keys in `LUNAZ_SELLERS`, so don't rename them. Prices are computed on the server from the catalog, so the browser can't change them.
 
 ## API key stays on the server
 
