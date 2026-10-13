@@ -11,6 +11,7 @@ import {
 	useHydrated,
 } from "#/components/Checkout";
 import { ErrorNote, mbtn, Spinner } from "#/components/Market";
+import { MAINNET_URL, TESTNET } from "#/components/TestnetBanner";
 import { Icon, toast } from "#/components/ui";
 import { setQty, useCart } from "#/lib/cart";
 import {
@@ -166,7 +167,7 @@ function Flow({
 		(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
 			setD({ ...d, [k]: e.target.value });
 	const total = totalOf(lines);
-	const swapOk = total >= MIN_SWAP_ZAT;
+	const swapOk = !TESTNET && total >= MIN_SWAP_ZAT;
 	const [method, setMethod] = useState<"zec" | "other">("zec");
 	const [busy, setBusy] = useState(false);
 	const [badEmail, setBadEmail] = useState(false);
@@ -371,14 +372,33 @@ function Flow({
 							className={`block font-bold ${swapOk ? "" : "text-stone-500"}`}
 						>
 							Other crypto
+							{TESTNET && (
+								<span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 align-middle text-xs font-bold text-stone-700">
+									Only on mainnet
+								</span>
+							)}
 						</span>
 						<span
 							id="other-hint"
 							className="mt-0.5 block text-sm text-stone-500"
 						>
-							{swapOk
-								? "USDC, USDT, SOL, ETH or BTC, swapped to ZEC via NEAR Intents."
-								: `Needs an order of at least 0.001 ZEC. Add ${zec(MIN_SWAP_ZAT - total)} more, or pay with Zcash.`}
+							{TESTNET ? (
+								<>
+									Paying with USDC, USDT, SOL, ETH or BTC through NEAR Intents
+									is only available on the{" "}
+									<a
+										href={MAINNET_URL}
+										className="font-semibold underline underline-offset-2"
+									>
+										mainnet version
+									</a>
+									.
+								</>
+							) : swapOk ? (
+								"USDC, USDT, SOL, ETH or BTC, swapped to ZEC via NEAR Intents."
+							) : (
+								`Needs an order of at least 0.001 ZEC. Add ${zec(MIN_SWAP_ZAT - total)} more, or pay with Zcash.`
+							)}
 						</span>
 					</span>
 					<span

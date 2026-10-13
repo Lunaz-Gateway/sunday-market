@@ -216,7 +216,7 @@ export function CheckoutShell({
 				{aside && (
 					<aside
 						aria-label="Order summary"
-						className="sticky top-6 hidden rounded-3xl bg-white p-6 ring-1 ring-stone-200 lg:block"
+						className="sticky top-[calc(var(--tb,0px)+1.5rem)] hidden rounded-3xl bg-white p-6 ring-1 ring-stone-200 lg:block"
 					>
 						{aside}
 					</aside>

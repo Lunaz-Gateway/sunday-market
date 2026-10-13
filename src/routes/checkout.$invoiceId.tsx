@@ -7,6 +7,7 @@ import {
 	readOrder,
 } from "#/components/Checkout";
 import { mbtn } from "#/components/Market";
+import { MAINNET_URL, TESTNET } from "#/components/TestnetBanner";
 import { btn, CopyButton, Dot, Icon, QrCode, useNow } from "#/components/ui";
 import { removeFromCart } from "#/lib/cart";
 import {
@@ -461,14 +462,17 @@ function Tabs({
 					aria-selected={value === o.v}
 					aria-controls={`p-${o.v}`}
 					tabIndex={value === o.v ? 0 : -1}
+					disabled={TESTNET && o.v === "other"}
+					title={TESTNET && o.v === "other" ? "Only on mainnet" : undefined}
 					onClick={() => onChange(o.v)}
 					onKeyDown={(e) => {
+						if (TESTNET) return;
 						if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
 						const next = opts[1 - j];
 						onChange(next.v);
 						refs.current[1 - j]?.focus();
 					}}
-					className={`relative min-h-12 rounded-xl text-sm font-bold transition-colors duration-150 ${value === o.v ? "text-malam" : "text-malam/55 hover:text-malam"}`}
+					className={`relative min-h-12 rounded-xl text-sm font-bold transition-colors duration-150 ${value === o.v ? "text-malam" : "text-malam/55 hover:text-malam"} disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-malam/55`}
 				>
 					{o.label}
 				</button>
@@ -497,7 +501,7 @@ function Panel({
 	method?: "other";
 }) {
 	const [tab, setTab] = useState<"zec" | "other">(
-		invoice.swap || method === "other" ? "other" : "zec",
+		!TESTNET && (invoice.swap || method === "other") ? "other" : "zec",
 	);
 	const detected = status === "detected";
 	const partial = detected && received > 0 && received < invoice.amount_zat;
@@ -530,6 +534,15 @@ function Panel({
 				</p>
 			)}
 			<Tabs value={tab} onChange={setTab} />
+			{TESTNET && (
+				<p className="-mt-2 text-xs text-malam/70">
+					Other crypto (USDC, USDT, SOL, ETH, BTC) is only on the{" "}
+					<a href={MAINNET_URL} className="font-semibold underline">
+						mainnet version
+					</a>
+					.
+				</p>
+			)}
 			<div
 				role="tabpanel"
 				id="p-zec"
@@ -548,7 +561,9 @@ function Panel({
 				aria-labelledby="t-other"
 				hidden={tab !== "other"}
 			>
-				<OtherTab invoice={invoice} usd={usd} swapStatus={swapStatus} />
+				{!TESTNET && (
+					<OtherTab invoice={invoice} usd={usd} swapStatus={swapStatus} />
+				)}
 			</div>
 		</>
 	);
