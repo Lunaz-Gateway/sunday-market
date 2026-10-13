@@ -690,7 +690,9 @@ function OtherTab({
 			setError(
 				/refund/i.test(m)
 					? `The refund address was rejected. Use a ${chain?.name ?? ""} address you control.`
-					: m || "Something went wrong. Try again.",
+					: /unavailable/i.test(m)
+						? "Swaps are unavailable right now. Try again in a minute, or pay with Zcash (shielded)."
+						: m || "Something went wrong. Try again.",
 			);
 			setBusy(false);
 		}
