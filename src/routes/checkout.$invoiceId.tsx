@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { Logo } from "#/components/Logo";
 import { ProductArt } from "#/components/ProductArt";
 import { btn, CopyButton, Dot, Icon, QrCode, useNow } from "#/components/ui";
+import { removeFromCart } from "#/lib/cart";
+import { decodeLines, MARKET, MIN_SWAP_ZAT, shopOf } from "#/lib/catalog";
 import { clock, fiat, short, underpaidText, ZAT, zec } from "#/lib/format";
 import {
 	createSwap,
@@ -13,23 +15,28 @@ import {
 	type SwapInfo,
 } from "#/lib/invoice";
 import { useZecUsd } from "#/lib/price";
-import { decodeCart, STORE } from "#/lib/products";
 import { useInvoiceStatus } from "#/lib/useInvoiceStatus";
 
 export const Route = createFileRoute("/checkout/$invoiceId")({
 	// z: ZIP-321 URI handed over by the creator (GET /v1/invoices lacks it).
-	// o: cart lines for the order summary.
+	// o: cart lines for the order summary. s: seller slug.
 	validateSearch: (s: Record<string, unknown>) => ({
 		z: typeof s.z === "string" && s.z.startsWith("zcash:") ? s.z : undefined,
 		o: typeof s.o === "string" ? s.o : undefined,
+		s: typeof s.s === "string" ? s.s : undefined,
 	}),
 	loader: ({ params }) => loadInvoice({ data: { id: params.invoiceId } }),
-	head: () => ({ meta: [{ title: `Pay ${STORE} · Lunaz` }] }),
+	head: ({ match }) => ({
+		meta: [
+			{
+				title: `Pay ${shopOf(match.search.s ?? "")?.name ?? MARKET} · Lunaz`,
+			},
+		],
+	}),
 	pendingComponent: Skeleton,
 	component: Checkout,
 });
 
-const MIN_SWAP_ZAT = 100_000;
 const STEPS = [
 	"Send your deposit",
 	"Deposit received",
@@ -115,6 +122,8 @@ function TokenBadge({
 	);
 }
 
+const useShopName = () => shopOf(Route.useSearch().s ?? "")?.name;
+
 function toMs(d: number | string): number {
 	const n = Number(d);
 	if (!Number.isNaN(n)) return n < 1e12 ? n * 1000 : n;
@@ -135,8 +144,8 @@ function Checkout() {
 						This payment link is invalid or has been removed. Nothing was
 						charged.
 					</p>
-					<Link to="/store" className={`${btn.lunas} mt-4`}>
-						Back to store
+					<Link to="/" className={`${btn.lunas} mt-4`}>
+						Return to marketplace
 					</Link>
 				</div>
 			</main>
@@ -157,7 +166,9 @@ function Footer({ light = false }: { light?: boolean }) {
 }
 
 function Page({ invoice }: { invoice: InvoiceDetail }) {
-	const { z, o } = Route.useSearch();
+	const { z, o, s } = Route.useSearch();
+	const shop = useShopName();
+	const STORE = shop ?? "the merchant";
 	const { status, swap, received, overpaid, link } = useInvoiceStatus(
 		invoice.id,
 		invoice.status,
@@ -167,7 +178,11 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	const left = Math.max(0, Math.floor(invoice.expires_at - now / 1000));
 	const expired = status === "expired" || (status === "pending" && left === 0);
 	const uri = invoice.zip321_uri ?? z;
-	const cart = decodeCart(o);
+	const cart = decodeLines(o);
+	// Paid lines leave the marketplace cart.
+	useEffect(() => {
+		if (status === "paid") removeFromCart(decodeLines(o).map((l) => l.id));
+	}, [status, o]);
 	const lines = (
 		<ul className="flex flex-col gap-4">
 			{cart.map((l) => (
@@ -176,7 +191,7 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 						style={{ background: l.tint }}
 						className="grid h-12 w-12 shrink-0 place-items-center rounded-xl"
 					>
-						<ProductArt id={l.id} className="h-10 w-10" />
+						<ProductArt art={l.art} accent={l.accent} className="h-10 w-10" />
 					</span>
 					<span className="min-w-0 flex-1">
 						<span className="block truncate text-sm font-semibold">
@@ -219,7 +234,8 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 					</p>
 					{overpaid > 0 && (
 						<p className="mt-2 rounded-full bg-kertas/10 px-4 py-1.5 text-sm font-semibold">
-							Overpaid by {zec(overpaid)}. {STORE} will refund the difference.
+							Overpaid by {zec(overpaid)}. {shop ?? "The merchant"} will refund
+							the difference.
 						</p>
 					)}
 					<p className="mt-3 max-w-sm text-kertas/70">
@@ -227,10 +243,10 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 					</p>
 				</div>
 				<Link
-					to="/store"
+					to="/"
 					className={`${btn.lunas} rise mt-2 min-w-64 text-lg [animation-delay:400ms]`}
 				>
-					Return to store
+					Return to marketplace
 				</Link>
 				<div className="mt-6">
 					<Footer />
@@ -244,14 +260,18 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 			<section className="px-5 pt-6 pb-8 sm:px-10 lg:flex lg:justify-end lg:py-16">
 				<div className="flex w-full max-w-md flex-col gap-6 lg:mr-6">
 					<Link
-						to="/store"
+						to={s ? "/shop/$slug" : "/"}
+						params={{ slug: s ?? "" }}
 						className="press -ml-2 flex min-h-11 items-center gap-1 self-start rounded-xl px-2 text-sm font-semibold text-kertas/70 hover:text-kertas"
 					>
 						<Icon name="back" className="h-4 w-4" />
-						{STORE}
+						{shop ?? MARKET}
 					</Link>
 					<div>
-						<p className="font-medium text-kertas/60">Pay {STORE}</p>
+						<p className="font-medium text-kertas/60">
+							Pay {STORE}
+							{s && <span className="text-kertas/40"> · via {MARKET}</span>}
+						</p>
 						<p className="mt-1 text-4xl font-extrabold tracking-tight tnum sm:text-5xl">
 							{zec(invoice.amount_zat)}
 						</p>
@@ -309,7 +329,7 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 					) : expired ? (
 						<Notice
 							title="Invoice expired"
-							body="No payment arrived in time and nothing was charged. Return to the store to start again."
+							body="No payment arrived in time and nothing was charged. Return to the marketplace to start again."
 						/>
 					) : (
 						<Panel
@@ -337,8 +357,8 @@ function Notice({ title, body }: { title: string; body: string }) {
 			</span>
 			<h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
 			<p className="text-malam/70">{body}</p>
-			<Link to="/store" className={`${btn.ink} mt-2 min-w-56`}>
-				Return to store
+			<Link to="/" className={`${btn.ink} mt-2 min-w-56`}>
+				Return to marketplace
 			</Link>
 		</div>
 	);
@@ -495,7 +515,7 @@ function ZecTab({ invoice, uri }: { invoice: InvoiceDetail; uri?: string }) {
 	if (!uri) {
 		return (
 			<p className="rounded-2xl bg-malam/5 p-4 text-sm">
-				Open this checkout from the store to get a payment QR code.
+				Open this checkout from the marketplace to get a payment QR code.
 			</p>
 		);
 	}
@@ -740,6 +760,7 @@ function Deposit({
 	status?: string;
 	onRetry: () => void;
 }) {
+	const shop = useShopName();
 	const now = useNow();
 	const left = Math.max(0, Math.floor((toMs(swap.deadline) - now) / 1000));
 	const step = STEP_OF[status ?? "PENDING_DEPOSIT"] ?? 0;
@@ -862,8 +883,9 @@ function Deposit({
 			</ol>
 			<p className="rounded-2xl bg-malam/[0.04] p-3 text-xs leading-relaxed text-malam/60">
 				Privacy: your {chainName(swap.blockchain)} deposit is public on that
-				chain and visible to the swap solver. The payment to {STORE} settles in
-				shielded ZEC, so the store never sees your wallet.
+				chain and visible to the swap solver. The payment to{" "}
+				{shop ?? "the merchant"} settles in shielded ZEC, so the store never
+				sees your wallet.
 			</p>
 		</div>
 	);
