@@ -43,6 +43,11 @@ body {
   outline-color: var(--color-pasar);
 }
 
+/* Focus moved by script (e.g. the order confirmation) needs no ring. */
+[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 /* Keep the footer and toasts clear of the phone cart bar. */
 @media (width < 48rem) {
   .market:has([data-cartbar]) {

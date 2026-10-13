@@ -77,7 +77,7 @@ function Steps({ current }: { current: number }) {
 					const cur = i === current;
 					const dot = (
 						<span
-							className={`grid h-7 w-7 place-items-center rounded-full text-xs font-bold transition-colors duration-200 ${done ? "bg-pasar text-white" : cur ? "bg-white text-pasar ring-2 ring-pasar" : "bg-white text-stone-400 ring-1 ring-stone-300"}`}
+							className={`grid h-7 w-7 place-items-center rounded-full text-xs font-bold transition-colors duration-200 ${done ? "bg-pasar text-white" : cur ? "bg-white text-pasar ring-2 ring-pasar" : "bg-white text-stone-500 ring-1 ring-stone-300"}`}
 						>
 							{done ? <Icon name="check" className="h-4 w-4" /> : i + 1}
 						</span>
@@ -112,7 +112,7 @@ function Steps({ current }: { current: number }) {
 												? "text-stone-900"
 												: done
 													? "text-stone-700"
-													: "text-stone-400"
+													: "text-stone-500"
 										}
 									>
 										{s}
@@ -203,7 +203,7 @@ export function CheckoutShell({
 			<footer className="border-t border-stone-200 bg-white px-4 py-6">
 				<div className="mx-auto flex max-w-6xl flex-col items-center gap-3">
 					<TrustRow />
-					<p className="text-xs text-stone-400">
+					<p className="text-xs text-stone-500">
 						{MARKET} is a demo store. Nothing ships.
 					</p>
 				</div>
