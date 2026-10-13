@@ -1,6 +1,8 @@
+import { randomInt } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseStatus } from "@tanstack/react-start/server";
 import { decodeLines, SHOPS, shopOf, totalOf } from "./catalog";
+import { nowSecs, type OrderRow, store } from "./db";
 
 export type Invoice = {
 	id: string;
@@ -13,11 +15,11 @@ export type Invoice = {
 
 const apiBase = () => process.env.LUNAZ_API_URL ?? "http://127.0.0.1:8099";
 
-type Seller = { slug: string; apiKey: string };
+type Seller = { slug: string; apiKey: string; webhookSecret?: string };
 let sellers: Seller[] | undefined;
 
-// LUNAZ_SELLERS = [{"slug","apiKey"}]; falls back to LUNAZ_API_KEY for every shop.
-function sellerList(): Seller[] {
+// LUNAZ_SELLERS = [{"slug","apiKey","webhookSecret"?}]; falls back to LUNAZ_API_KEY for every shop.
+export function sellerList(): Seller[] {
 	if (sellers) return sellers;
 	const raw = process.env.LUNAZ_SELLERS;
 	if (raw) {
@@ -69,16 +71,93 @@ async function postInvoice(seller: string, amountZat: number) {
 	return (await res.json()) as Invoice;
 }
 
+const ORDER_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
+const orderNumber = () =>
+	`SM-${Array.from({ length: 6 }, () => ORDER_ALPHABET[randomInt(ORDER_ALPHABET.length)]).join("")}`;
+
 // Marketplace: one invoice per shop, priced on the server from the catalog.
 export const createOrder = createServerFn({ method: "POST" })
-	.inputValidator((d: { seller: string; lines: string }) => d)
-	.handler(async ({ data }): Promise<Invoice> => {
+	.inputValidator((d: { seller: string; lines: string; email?: string }) => d)
+	.handler(async ({ data }): Promise<Invoice & { orderId: string }> => {
 		if (!shopOf(data.seller)) badRequest("Unknown shop");
 		const lines = decodeLines(data.lines);
 		if (!lines.length || lines.some((l) => l.shop !== data.seller)) {
 			badRequest("Invalid order");
 		}
-		return postInvoice(data.seller, totalOf(lines));
+		const inv = await postInvoice(data.seller, totalOf(lines));
+		const orderId = orderNumber();
+		const t = nowSecs();
+		store()
+			.prepare(
+				"INSERT INTO orders(id,seller,invoice_id,lines,amount_zat,status,contact_email,created_at,updated_at) VALUES(?,?,?,?,?,'pending',?,?,?)",
+			)
+			.run(
+				orderId,
+				data.seller,
+				inv.id,
+				JSON.stringify(
+					lines.map((l) => ({
+						id: l.id,
+						name: l.name,
+						qty: l.qty,
+						zat: l.zat,
+					})),
+				),
+				inv.amount_zat,
+				data.email?.trim().slice(0, 200) || null,
+				t,
+				t,
+			);
+		return { ...inv, orderId };
+	});
+
+export type OrderView = {
+	id: string;
+	seller: string;
+	invoiceId: string;
+	lines: { id: string; name: string; qty: number; zat: number }[];
+	amountZat: number;
+	status: OrderRow["status"];
+	receivedZat: number;
+	txid: string | null;
+	createdAt: number;
+	paidAt: number | null;
+};
+
+const view = (r: OrderRow): OrderView => ({
+	id: r.id,
+	seller: r.seller,
+	invoiceId: r.invoice_id,
+	lines: JSON.parse(r.lines),
+	amountZat: r.amount_zat,
+	status: r.status,
+	receivedZat: r.received_zat,
+	txid: r.txid,
+	createdAt: r.created_at,
+	paidAt: r.paid_at,
+});
+
+// Only the ids the browser asks for; there is no listing of other buyers' orders.
+export const listOrders = createServerFn({ method: "GET" })
+	.inputValidator((d: { ids: string[] }) => d)
+	.handler(async ({ data }): Promise<OrderView[]> => {
+		const ids = data.ids.slice(0, 50);
+		if (!ids.length) return [];
+		const rows = store()
+			.prepare(
+				`SELECT * FROM orders WHERE id IN (${ids.map(() => "?").join(",")}) ORDER BY created_at DESC`,
+			)
+			.all(...ids) as OrderRow[];
+		return rows.map(view);
+	});
+
+export const getOrderById = createServerFn({ method: "GET" })
+	.inputValidator((d: { id: string }) => d)
+	.handler(async ({ data }): Promise<OrderView | null> => {
+		const r = store().prepare("SELECT * FROM orders WHERE id=?").get(data.id) as
+			| OrderRow
+			| undefined;
+		return r ? view(r) : null;
 	});
 
 // Server-side only: the REST endpoint has no CORS headers.

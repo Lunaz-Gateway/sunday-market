@@ -16,14 +16,17 @@ COPY . .
 ARG VITE_LUNAZ_WS_URL=ws://127.0.0.1:8099
 ARG VITE_LUNAZ_SITE_URL=https://lunaz.example.com
 ENV VITE_LUNAZ_WS_URL=$VITE_LUNAZ_WS_URL VITE_LUNAZ_SITE_URL=$VITE_LUNAZ_SITE_URL
-RUN bun run build
+RUN bun run build && mkdir /data
 
 FROM gcr.io/distroless/nodejs22-debian12:nonroot
 WORKDIR /app
-ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DEMO_DB=/data/demo.db
 COPY --from=prod-deps --chown=nonroot:nonroot /app/node_modules ./node_modules
 COPY --from=build --chown=nonroot:nonroot /app/dist ./dist
 COPY --chown=nonroot:nonroot package.json server.mjs ./
+# distroless has no shell: seed /data from a build stage so the volume is writable by nonroot
+COPY --from=build --chown=nonroot:nonroot /data /data
+VOLUME /data
 USER nonroot
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

@@ -21,11 +21,27 @@ Shops and products are defined in `src/lib/catalog.ts`. Shop slugs are the keys 
 
 Invoice calls (`src/lib/invoice.ts`) are TanStack server functions. They run on the server, look up the shop's key by its slug, and send `Authorization: Bearer <key>` to core-service. An unknown shop gets a 400. The key is never sent to the browser. The browser only receives the invoice, and opens a WebSocket to core-service for live status (`/v1/invoices/:id/ws`, no key needed).
 
+## Orders and webhooks
+
+Like a real merchant integration, the shop keeps its own orders in SQLite (`node:sqlite`, Node 22.13+, no extra dependency). `createOrder` creates the Lunaz invoice, then inserts an `orders` row (`pending`) with an order number like `SM-7K3QX9`. The payment panel still shows live status over WebSocket; the buyer's `/orders` and `/orders/$orderId` pages read the database and refresh every 5 s while an order is open. A browser only lists the order ids saved in its own `localStorage`.
+
+Tables: `orders` (id, seller, invoice_id UNIQUE, lines JSON, amount_zat, status `pending|detected|paid|underpaid|expired`, received_zat, txid, contact_email, created_at, paid_at, updated_at) and `webhook_events` (every delivery with signature validity and the response code).
+
+Webhook receiver: `POST https://<demo host>/api/webhooks/lunaz/<seller-slug>`. It reads the raw body, checks `X-Lunaz-Signature` (hex HMAC-SHA256 of the raw body, keyed with that seller's `webhookSecret`) in constant time, and only then parses the JSON.
+
+- Bad signature: logged with `signature_valid=0`, answer 401. Missing secret for the seller: 500.
+- `invoice.paid` and `invoice.underpaid` update the order by `invoice_id` (a paid order is never downgraded). `swap.*` and `test` events are only logged. Unknown invoices are logged and answered 200.
+
+Configure each seller in the Lunaz dashboard (Settings, Webhooks): set the URL above for that seller's slug, copy the signing secret into that seller's `webhookSecret` in `LUNAZ_SELLERS`, restart, then press "Send test". The URL must be reachable from core-service (locally `http://127.0.0.1:3000/api/webhooks/lunaz/<slug>`; the dev server binds 127.0.0.1).
+
+In Docker the database lives in the `/data` volume: `-v lunaz-demo-data:/data` with `--read-only` (the root filesystem stays read-only).
+
 ## Environment
 
 | Variable | Where | Description |
 | --- | --- | --- |
-| `LUNAZ_SELLERS` | server, runtime, secret | JSON array `[{"slug":"kedai-kopi-senja","apiKey":"lz_..."}, ...]`, one merchant key per shop |
+| `LUNAZ_SELLERS` | server, runtime, secret | JSON array `[{"slug":"kedai-kopi-senja","apiKey":"lz_...","webhookSecret":"..."}, ...]`, one merchant key and webhook secret per shop |
+| `DEMO_DB` | server, runtime | SQLite file for orders and webhook events (default `./data/demo.db`, `/data/demo.db` in Docker) |
 | `LUNAZ_API_KEY` | server, runtime, secret | fallback: if `LUNAZ_SELLERS` is unset, every shop uses this key (a warning is logged once) |
 | `LUNAZ_API_URL` | server, runtime | core-service base URL (default `http://127.0.0.1:8099`) |
 | `VITE_LUNAZ_SITE_URL` | public, build time | Lunaz website behind the "Payments by Lunaz" badge (default `https://lunaz.example.com`) |
@@ -54,7 +70,7 @@ docker build --build-arg VITE_LUNAZ_WS_URL=wss://api.example.com -t lunaz-demo .
 docker run -d --name lunaz-demo --read-only --tmpfs /tmp --cap-drop ALL \
   --security-opt no-new-privileges:true --pids-limit 256 --memory 512m \
   -p 127.0.0.1:3000:3000 -e LUNAZ_API_URL=http://core:8080 \
-  -e LUNAZ_SELLERS="$LUNAZ_SELLERS" \
+  -e LUNAZ_SELLERS="$LUNAZ_SELLERS" -v lunaz-demo-data:/data \
   --restart unless-stopped lunaz-demo
 ```
 
@@ -77,7 +93,10 @@ services:
     environment:
       LUNAZ_API_URL: http://core:8080
       LUNAZ_SELLERS: ${LUNAZ_SELLERS}
+    volumes: ["demo-data:/data"]
     restart: unless-stopped
+volumes:
+  demo-data:
 ```
 
 ## Deploy notes
