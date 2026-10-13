@@ -6,6 +6,7 @@ import {
 	ShopAvatar,
 } from "#/components/Market";
 import { ProductArt } from "#/components/ProductArt";
+import { TESTNET } from "#/components/TestnetBanner";
 import {
 	CATEGORIES,
 	type Category,
@@ -169,7 +170,7 @@ function Hero() {
 				</h1>
 				<p className="mt-3 max-w-sm text-white/80">
 					Every order goes straight to the seller's own shielded wallet. Pay
-					with ZEC, or with USDC, SOL, BTC or ETH.
+					with ZEC, or with USDC, SOL, BTC or ETH{TESTNET && " (mainnet only)"}.
 				</p>
 				<div className="mt-5">
 					<LunazBadge label="Private payments by" />

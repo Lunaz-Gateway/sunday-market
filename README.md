@@ -47,6 +47,8 @@ In Docker the database lives in the `/data` volume: `-v lunaz-demo-data:/data` w
 | `LUNAZ_API_URL` | server, runtime | core-service base URL (default `http://127.0.0.1:8099`) |
 | `VITE_LUNAZ_SITE_URL` | public, build time | Lunaz website behind the "Payments by Lunaz" badge (default `https://lunaz.example.com`) |
 | `VITE_LUNAZ_WS_URL` | public, build time | WebSocket base URL the browser connects to (default `ws://127.0.0.1:8099`) |
+| `VITE_TESTNET` | public, build time | `1` shows the testnet banner and disables "Other crypto" (cross-chain is mainnet only); empty for mainnet |
+| `VITE_MAINNET_URL` | public, build time | Mainnet site linked from the testnet banner (default `https://lunaz.alwaysbedream.dev`) |
 
 `VITE_LUNAZ_WS_URL` must also be set at runtime (the Dockerfile does this): `server.mjs` derives the CSP `connect-src` WebSocket origin from it.
 
@@ -114,5 +116,6 @@ volumes:
 
 - Terminate TLS in a reverse proxy and publish the container on `127.0.0.1` only.
 - The browser must reach core-service WebSocket at `VITE_LUNAZ_WS_URL`, so expose it publicly (as `wss://`). `LUNAZ_API_URL` can stay internal.
+- Changing `VITE_TESTNET` or `VITE_MAINNET_URL` also requires a rebuild.
 - Changing `VITE_LUNAZ_WS_URL` requires a rebuild.
 - Anyone can place an order, which creates an invoice with that shop's key. Rate-limit `POST` requests to the server functions at the proxy if needed.

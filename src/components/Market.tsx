@@ -327,7 +327,7 @@ export function MarketShell({
 }) {
 	return (
 		<div className="market flex min-h-dvh flex-col bg-stone-50 text-stone-900">
-			<header className="sticky top-0 z-20 border-b border-stone-200/80 bg-white/85 backdrop-blur-lg">
+			<header className="sticky top-[var(--tb,0px)] z-20 border-b border-stone-200/80 bg-white/85 backdrop-blur-lg">
 				<div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:flex-nowrap sm:px-6">
 					<Link to="/" search={{}} className="shrink-0 rounded-lg">
 						<MarketLogo />

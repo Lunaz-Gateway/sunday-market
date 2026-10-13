@@ -11,6 +11,7 @@ import {
 	Stepper,
 } from "#/components/Market";
 import { ProductArt } from "#/components/ProductArt";
+import { TESTNET } from "#/components/TestnetBanner";
 import { Icon } from "#/components/ui";
 import {
 	MARKET,
@@ -109,6 +110,7 @@ function ProductPage() {
 						<p>
 							Pay with shielded ZEC, or with USDC, SOL, BTC or ETH and it's
 							swapped to ZEC for you
+							{TESTNET && " (mainnet only)"}
 							{p.zat * n < MIN_SWAP_ZAT && " (orders from 0.001 ZEC)"}. The
 							money goes straight to {shop.name}.
 						</p>

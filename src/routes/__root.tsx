@@ -7,9 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { MarketShell, mbtn } from "#/components/Market";
+import { TestnetBanner } from "#/components/TestnetBanner";
 import { Icon, Toaster } from "#/components/ui";
 import { MARKET } from "#/lib/catalog";
-
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
@@ -127,6 +127,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
+				<TestnetBanner name="Sunday Market" />
 				{children}
 				<Toaster />
 				<Scripts />

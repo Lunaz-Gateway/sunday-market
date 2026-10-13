@@ -7,6 +7,7 @@ import {
 	Stepper,
 } from "#/components/Market";
 import { ProductArt } from "#/components/ProductArt";
+import { TESTNET } from "#/components/TestnetBanner";
 import { Icon, toast } from "#/components/ui";
 import { countOf, setQty, useCart } from "#/lib/cart";
 import {
@@ -158,7 +159,7 @@ function ShopGroup({
 					{total < MIN_SWAP_ZAT && (
 						<span className="text-xs text-stone-500">
 							Pay in ZEC, or add {zec(MIN_SWAP_ZAT - total)} more to pay with
-							USDC, SOL, BTC or ETH.
+							USDC, SOL, BTC or ETH{TESTNET && " (mainnet only)"}.
 						</span>
 					)}
 				</div>
