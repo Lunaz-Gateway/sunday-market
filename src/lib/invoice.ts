@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseStatus } from "@tanstack/react-start/server";
+import { decodeLines, SHOPS, shopOf, totalOf } from "./catalog";
 
 export type Invoice = {
 	id: string;
@@ -9,6 +11,67 @@ export type Invoice = {
 	expires_at: number;
 };
 
+const apiBase = () => process.env.LUNAZ_API_URL ?? "http://127.0.0.1:8099";
+
+type Seller = { slug: string; apiKey: string };
+let sellers: Seller[] | undefined;
+
+// LUNAZ_SELLERS = [{"slug","apiKey"}]; falls back to LUNAZ_API_KEY for every shop.
+function sellerList(): Seller[] {
+	if (sellers) return sellers;
+	const raw = process.env.LUNAZ_SELLERS;
+	if (raw) {
+		const list = JSON.parse(raw) as Seller[];
+		sellers = list.filter((s) => s?.slug && s.apiKey);
+	} else {
+		const key = process.env.LUNAZ_API_KEY ?? "";
+		console.warn(
+			"LUNAZ_SELLERS is not set: every shop uses LUNAZ_API_KEY (single merchant).",
+		);
+		sellers = SHOPS.map((s) => ({ slug: s.slug, apiKey: key }));
+	}
+	return sellers;
+}
+
+function badRequest(msg: string): never {
+	setResponseStatus(400);
+	throw new Error(msg);
+}
+
+const posSlug = () => process.env.LUNAZ_POS_SELLER || sellerList()[0]?.slug;
+
+async function postInvoice(seller: string, amountZat: number) {
+	const key = sellerList().find((s) => s.slug === seller)?.apiKey;
+	if (!key) {
+		throw new Error("This shop has no merchant key configured.");
+	}
+	const res = await fetch(`${apiBase()}/v1/invoices`, {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			authorization: `Bearer ${key}`,
+		},
+		body: JSON.stringify({ amount_zat: amountZat }),
+		signal: AbortSignal.timeout(10_000),
+	}).catch(() => {
+		throw new Error(
+			"Can't reach the payment server. Check the connection and try again.",
+		);
+	});
+	if (res.status === 401 || res.status === 403) {
+		throw new Error(
+			"The merchant key was rejected. Ask the store owner to update it.",
+		);
+	}
+	if (!res.ok) {
+		throw new Error(
+			`The payment server couldn't create the invoice (${res.status}). Try again.`,
+		);
+	}
+	return (await res.json()) as Invoice;
+}
+
+// Cashier: charges an amount to the POS shop.
 export const createInvoice = createServerFn({ method: "POST" })
 	.inputValidator((d: { amountZat: number }) => {
 		if (!Number.isSafeInteger(d.amountZat) || d.amountZat <= 0) {
@@ -17,43 +80,33 @@ export const createInvoice = createServerFn({ method: "POST" })
 		return d;
 	})
 	.handler(async ({ data }): Promise<Invoice> => {
-		const base = process.env.LUNAZ_API_URL ?? "http://127.0.0.1:8099";
-		if (!process.env.LUNAZ_API_KEY) {
-			throw new Error("This terminal has no merchant key configured.");
+		const slug = posSlug();
+		if (!slug) throw new Error("This terminal has no merchant key configured.");
+		return postInvoice(slug, data.amountZat);
+	});
+
+export const getPosShop = createServerFn({ method: "GET" }).handler(
+	async () => posSlug() ?? null,
+);
+
+// Marketplace: one invoice per shop, priced on the server from the catalog.
+export const createOrder = createServerFn({ method: "POST" })
+	.inputValidator((d: { seller: string; lines: string }) => d)
+	.handler(async ({ data }): Promise<Invoice> => {
+		if (!shopOf(data.seller)) badRequest("Unknown shop");
+		const lines = decodeLines(data.lines);
+		if (!lines.length || lines.some((l) => l.shop !== data.seller)) {
+			badRequest("Invalid order");
 		}
-		const res = await fetch(`${base}/v1/invoices`, {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				authorization: `Bearer ${process.env.LUNAZ_API_KEY}`,
-			},
-			body: JSON.stringify({ amount_zat: data.amountZat }),
-			signal: AbortSignal.timeout(10_000),
-		}).catch(() => {
-			throw new Error(
-				"Can't reach the payment server. Check the connection and try again.",
-			);
-		});
-		if (res.status === 401 || res.status === 403) {
-			throw new Error(
-				"The merchant key was rejected. Ask the store owner to update it.",
-			);
-		}
-		if (!res.ok) {
-			throw new Error(
-				`The payment server couldn't create the invoice (${res.status}). Try again.`,
-			);
-		}
-		return res.json();
+		return postInvoice(data.seller, totalOf(lines));
 	});
 
 // Server-side only: the REST endpoint has no CORS headers.
 export const getInvoice = createServerFn({ method: "GET" })
 	.inputValidator((d: { id: string }) => d)
 	.handler(async ({ data }) => {
-		const base = process.env.LUNAZ_API_URL ?? "http://127.0.0.1:8099";
 		const res = await fetch(
-			`${base}/v1/invoices/${encodeURIComponent(data.id)}`,
+			`${apiBase()}/v1/invoices/${encodeURIComponent(data.id)}`,
 		);
 		if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
 		return (await res.json()) as {
@@ -94,8 +147,6 @@ export type SwapAsset = {
 	decimals: number;
 	price_usd: number | null;
 };
-
-const apiBase = () => process.env.LUNAZ_API_URL ?? "http://127.0.0.1:8099";
 
 // Public checkout loader: null means 404.
 export const loadInvoice = createServerFn({ method: "GET" })
