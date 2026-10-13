@@ -47,7 +47,7 @@ function ProductPage() {
 	const more = productsOf(shop.slug).filter((x) => x.id !== p.id);
 
 	return (
-		<MarketShell>
+		<MarketShell cartBar={false}>
 			<nav aria-label="Breadcrumb" className="mb-4 text-sm text-stone-500">
 				<Link to="/" className="hover:text-pasar">
 					{MARKET}
@@ -83,11 +83,15 @@ function ProductPage() {
 							{n > 1 && `${n} × ${zec(p.zat)}`}
 						</span>
 					</div>
-					<div className="grid gap-3 sm:grid-cols-2">
+					{/* Phones: pinned to the bottom so the buy buttons never scroll away. */}
+					<div
+						data-cartbar
+						className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-2 gap-3 border-t border-stone-200 bg-white/90 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-lg md:static md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none"
+					>
 						<button
 							type="button"
 							onClick={() => add(p, n)}
-							className={`${mbtn.outline} min-h-14`}
+							className={`${mbtn.outline} min-h-12 bg-white md:min-h-14`}
 						>
 							<Icon name="cart" className="h-5 w-5" />
 							Add to cart
@@ -95,7 +99,7 @@ function ProductPage() {
 						<Link
 							to="/checkout"
 							search={{ seller: shop.slug, buy: `${p.id}:${n}` }}
-							className={`${mbtn.primary} min-h-14`}
+							className={`${mbtn.primary} min-h-12 md:min-h-14`}
 						>
 							Buy now
 						</Link>
