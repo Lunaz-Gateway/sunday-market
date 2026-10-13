@@ -282,6 +282,9 @@ function Confirmed({
 	txid: string | null;
 	email?: string;
 }) {
+	// Move focus to the confirmation so screen readers announce it.
+	const done = useRef<HTMLParagraphElement>(null);
+	useEffect(() => done.current?.focus(), []);
 	return (
 		<div className="mx-auto flex w-full max-w-xl flex-col gap-5">
 			<section
@@ -290,7 +293,9 @@ function Confirmed({
 			>
 				<p
 					id="done"
-					className="rise flex items-center gap-2 rounded-full bg-lunas/10 px-4 py-1.5 text-sm font-bold text-lunas"
+					ref={done}
+					tabIndex={-1}
+					className="rise outline-none flex items-center gap-2 rounded-full bg-lunas/10 px-4 py-1.5 text-sm font-bold text-lunas"
 				>
 					<span className="grid h-5 w-5 place-items-center rounded-full bg-lunas text-malam">
 						<Icon name="check" className="h-3.5 w-3.5" />
@@ -350,8 +355,8 @@ function Confirmed({
 					{txid && (
 						<>
 							<dt className="text-stone-500">Transaction</dt>
-							<dd className="flex items-center justify-end gap-2 font-mono">
-								{short(txid, 6)}
+							<dd className="flex items-center justify-end gap-2">
+								<span className="font-mono">{short(txid, 6)}</span>
 								<CopyButton
 									text={txid}
 									what="Transaction ID"
@@ -922,7 +927,7 @@ function Deposit({
 							className={`relative flex items-center gap-3 text-sm transition-opacity duration-300 ${i <= step ? "font-semibold" : "text-malam/45"}`}
 						>
 							<span
-								className={`relative grid h-6 w-6 place-items-center rounded-full border-2 transition-colors duration-300 ${ok ? "border-malam bg-malam text-kertas" : cur ? (problem ? "border-danger-ink bg-kertas text-danger-ink" : "border-malam bg-kertas") : "border-malam/20 bg-kertas"}`}
+								className={`relative grid h-6 w-6 place-items-center rounded-full border-2 transition-colors duration-300 ${ok ? "border-malam bg-malam text-kertas" : cur ? (problem ? "border-danger-ink bg-white text-danger-ink" : "border-malam bg-white") : "border-malam/20 bg-white"}`}
 							>
 								{ok ? (
 									<Icon name="check" className="h-3.5 w-3.5" />
