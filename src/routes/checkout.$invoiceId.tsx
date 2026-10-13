@@ -17,7 +17,7 @@ import {
 	type Shop,
 	shopOf,
 } from "#/lib/catalog";
-import { clock, fiat, short, underpaidText, ZAT, zec } from "#/lib/format";
+import { clock, fiat, short, ZAT, zec } from "#/lib/format";
 import {
 	createSwap,
 	getSwapAssets,
@@ -180,6 +180,7 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	const uri = invoice.zip321_uri ?? z;
 	const lines = decodeLines(o);
 	const paid = status === "paid";
+	const open = !expired && (status === "pending" || status === "detected");
 	// Buyer details live only in this browser (saved when the order was placed).
 	const [rec, setRec] = useState<OrderRecord | null>(null);
 	useEffect(() => setRec(readOrder(invoice.id)), [invoice.id]);
@@ -195,17 +196,6 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 				<dt className="text-stone-500">Order</dt>
 				<dd className="font-mono text-xs leading-5">#{orderNo(invoice.id)}</dd>
 			</div>
-			{!paid && (
-				<div className="flex justify-between gap-4">
-					<dt className="text-stone-500">Pay within</dt>
-					<dd
-						suppressHydrationWarning
-						className={`font-semibold tnum ${!expired && left < 120 ? "text-danger-ink" : ""}`}
-					>
-						{expired ? "Expired" : clock(left)}
-					</dd>
-				</div>
-			)}
 		</OrderSummary>
 	);
 
@@ -223,22 +213,36 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 				/>
 			) : (
 				<section className="on-light rise flex flex-col gap-6 rounded-3xl bg-white p-5 text-malam ring-1 ring-stone-200 sm:p-8">
-					<div>
-						<p className="text-sm font-medium text-stone-500">
-							Pay {shop?.name ?? "the shop"}
-							<span className="text-stone-400"> · via {MARKET}</span>
-						</p>
-						<p className="mt-1 text-4xl font-extrabold tracking-tight tnum">
-							{zec(invoice.amount_zat)}
-						</p>
-						<p className="mt-0.5 h-6 text-stone-500 tnum">
-							{fiat(invoice.amount_zat, usd)}
-						</p>
+					<div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+						<div>
+							<p className="text-sm font-medium text-stone-500">
+								Pay {shop?.name ?? "the shop"} · via {MARKET}
+							</p>
+							<p className="mt-1 text-4xl font-extrabold tracking-tight tnum">
+								{zec(invoice.amount_zat)}
+							</p>
+							<p className="mt-0.5 h-6 text-stone-500 tnum">
+								{fiat(invoice.amount_zat, usd)}
+							</p>
+						</div>
+						{open && (
+							<p
+								className={`flex items-baseline gap-2 rounded-full px-3 py-1.5 sm:flex-col sm:items-end sm:gap-0 sm:rounded-2xl sm:px-4 sm:py-2 ${left < 120 ? "bg-danger-ink/10 text-danger-ink" : "bg-malam/[0.05]"}`}
+							>
+								<span className="text-xs font-semibold">Pay within</span>
+								<span
+									suppressHydrationWarning
+									className="font-extrabold tnum sm:text-xl"
+								>
+									{clock(left)}
+								</span>
+							</p>
+						)}
 					</div>
 					{status === "underpaid" ? (
 						<Notice
 							title="Partially paid"
-							body={underpaidText(received, invoice.amount_zat)}
+							body={`Only ${zec(received)} of ${zec(invoice.amount_zat)} arrived before the order closed, so it wasn't completed. Keep order number #${orderNo(invoice.id)}: ${shop?.name ?? "the shop"} can match it to your payment and send it back.`}
 						/>
 					) : expired ? (
 						<Notice
@@ -322,8 +326,8 @@ function Confirmed({
 				</p>
 				{overpaid > 0 && (
 					<p className="mt-2 rounded-full bg-kertas/10 px-4 py-1.5 text-sm font-semibold">
-						Overpaid by {zec(overpaid)}. {shop?.name ?? "The shop"} will refund
-						the difference.
+						You sent {zec(overpaid)} more than the total. Keep your order number
+						to ask {shop?.name ?? "the shop"} for it back.
 					</p>
 				)}
 			</section>
@@ -494,20 +498,25 @@ function Panel({
 	);
 	const detected = status === "detected";
 	const partial = detected && received > 0 && received < invoice.amount_zat;
+	const swapping =
+		(STEP_OF[swapStatus ?? ""] ?? 0) > 0 && !RETRY.has(swapStatus ?? "");
+	const busy = detected || swapping;
 	return (
 		<>
 			<div className="flex items-center justify-between gap-3">
 				<h2 className="text-lg font-bold">Pay with</h2>
 				<p
 					aria-live="polite"
-					className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors duration-300 ${detected ? "bg-malam text-kertas" : "bg-malam/[0.06]"}`}
+					className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold transition-colors duration-300 ${busy ? "bg-malam text-kertas" : "bg-malam/[0.06]"}`}
 				>
-					<Dot tone={detected ? "lunas" : "malam"} />
+					<Dot tone={busy ? "lunas" : "malam"} />
 					{detected
 						? "Payment detected · confirming"
-						: link === "live"
-							? "Waiting for payment"
-							: "Reconnecting…"}
+						: swapping
+							? "Deposit received · swapping"
+							: link === "live"
+								? "Waiting for payment"
+								: "Reconnecting…"}
 				</p>
 			</div>
 			{partial && (
@@ -524,7 +533,11 @@ function Panel({
 				aria-labelledby="t-zec"
 				hidden={tab !== "zec"}
 			>
-				<ZecTab invoice={invoice} uri={uri} />
+				<ZecTab
+					invoice={invoice}
+					uri={uri}
+					due={partial ? invoice.amount_zat - received : invoice.amount_zat}
+				/>
 			</div>
 			<div
 				role="tabpanel"
@@ -552,7 +565,7 @@ function Row({
 	return (
 		<div className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 pl-4 ring-1 ring-malam/10">
 			<div className="min-w-0">
-				<p className="text-xs font-semibold text-malam/50">{label}</p>
+				<p className="text-xs font-semibold text-malam/65">{label}</p>
 				<p className="truncate font-mono text-sm">
 					{shown ?? short(value, 12)}
 				</p>
@@ -567,7 +580,19 @@ function Row({
 	);
 }
 
-function ZecTab({ invoice, uri }: { invoice: InvoiceDetail; uri?: string }) {
+function ZecTab({
+	invoice,
+	uri: full,
+	due,
+}: {
+	invoice: InvoiceDetail;
+	uri?: string;
+	due: number;
+}) {
+	const amount = zec(due).replace(" ZEC", "");
+	// After a partial payment, ask only for what's left.
+	const uri = full?.replace(/([?&]amount=)[^&]*/, `$1${amount}`);
+	const rest = due < invoice.amount_zat;
 	if (!uri) {
 		return (
 			<p className="rounded-2xl bg-malam/5 p-4 text-sm">
@@ -576,7 +601,6 @@ function ZecTab({ invoice, uri }: { invoice: InvoiceDetail; uri?: string }) {
 			</p>
 		);
 	}
-	const amount = zec(invoice.amount_zat).replace(" ZEC", "");
 	return (
 		<div className="flex flex-col gap-4">
 			<QrCode
@@ -587,12 +611,12 @@ function ZecTab({ invoice, uri }: { invoice: InvoiceDetail; uri?: string }) {
 			<p className="text-center text-sm text-malam/60">
 				Scan with a Zcash wallet such as Zashi or Ywallet.
 			</p>
-			<a href={uri} className={`${btn.ink} text-base`}>
+			<a href={uri} className={`${btn.ink} text-base max-sm:order-first`}>
 				<Icon name="wallet" className="h-5 w-5" />
 				Open in wallet
 			</a>
 			<Row
-				label="Amount"
+				label={rest ? "Amount left to pay" : "Amount"}
 				value={amount}
 				shown={`${amount} ZEC`}
 				what="Amount"
@@ -764,6 +788,7 @@ function OtherTab({
 				Refund address
 				<input
 					required
+					disabled={!asset}
 					value={refund}
 					onChange={(e) => setRefund(e.target.value)}
 					autoComplete="off"
@@ -924,7 +949,7 @@ function Deposit({
 						<li
 							key={s}
 							aria-current={cur ? "step" : undefined}
-							className={`relative flex items-center gap-3 text-sm transition-opacity duration-300 ${i <= step ? "font-semibold" : "text-malam/45"}`}
+							className={`relative flex items-center gap-3 text-sm transition-opacity duration-300 ${i <= step ? "font-semibold" : "text-malam/60"}`}
 						>
 							<span
 								className={`relative grid h-6 w-6 place-items-center rounded-full border-2 transition-colors duration-300 ${ok ? "border-malam bg-malam text-kertas" : cur ? (problem ? "border-danger-ink bg-white text-danger-ink" : "border-malam bg-white") : "border-malam/20 bg-white"}`}
