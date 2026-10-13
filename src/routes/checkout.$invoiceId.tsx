@@ -191,7 +191,7 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	}, [paid, o, invoice.id]);
 
 	const summary = (
-		<OrderSummary shop={shop} lines={lines} usd={usd}>
+		<OrderSummary shop={shop} lines={lines} usd={usd} locked>
 			<div className="flex justify-between gap-4">
 				<dt className="text-stone-500">Order</dt>
 				<dd className="font-mono text-xs leading-5">#{orderNo(invoice.id)}</dd>

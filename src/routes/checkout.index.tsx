@@ -11,8 +11,8 @@ import {
 	useHydrated,
 } from "#/components/Checkout";
 import { ErrorNote, mbtn, Spinner } from "#/components/Market";
-import { Icon } from "#/components/ui";
-import { useCart } from "#/lib/cart";
+import { Icon, toast } from "#/components/ui";
+import { setQty, useCart } from "#/lib/cart";
 import {
 	decodeLines,
 	encodeLines,
@@ -55,6 +55,46 @@ function CheckoutPage() {
 					.map((p) => ({ ...p, qty: cart[p.id] }))
 		: [];
 	const n = step === "payment" ? 2 : 1;
+	const navigate = useNavigate();
+
+	// Cart checkout edits the cart; Buy now edits the ?buy= param.
+	const apply = (
+		next: Record<string, number>,
+		prev: Record<string, number>,
+	) => {
+		const left = Object.values(next).some((q) => q > 0);
+		if (buy) {
+			if (!left) {
+				navigate({ to: "/product/$id", params: { id: Object.keys(prev)[0] } });
+			} else {
+				navigate({
+					to: "/checkout",
+					search: { seller, step, buy: encodeLines(next) },
+					replace: true,
+				});
+			}
+		} else {
+			for (const id of new Set([...Object.keys(next), ...Object.keys(prev)])) {
+				if (next[id] !== prev[id]) setQty(id, next[id] ?? 0);
+			}
+			if (!left) navigate({ to: "/cart" });
+		}
+	};
+	const qtys = Object.fromEntries(lines.map((l) => [l.id, l.qty]));
+	const onQty = (l: Line, q: number) => apply({ ...qtys, [l.id]: q }, qtys);
+	const onRemove = (l: Line) => {
+		const next = { ...qtys };
+		delete next[l.id];
+		apply(next, qtys);
+		if (!Object.keys(next).length) {
+			toast("Your order is empty");
+			return;
+		}
+		toast(`${l.name} removed`, {
+			label: "Undo",
+			onClick: () => apply(qtys, next),
+		});
+	};
 
 	if (!hydrated) {
 		return (
@@ -89,7 +129,15 @@ function CheckoutPage() {
 	return (
 		<CheckoutShell
 			step={n}
-			aside={<OrderSummary shop={shop} lines={lines} usd={usd} />}
+			aside={
+				<OrderSummary
+					shop={shop}
+					lines={lines}
+					usd={usd}
+					onQty={onQty}
+					onRemove={onRemove}
+				/>
+			}
 		>
 			<Flow shop={shop} lines={lines} buy={buy} step={step} />
 		</CheckoutShell>

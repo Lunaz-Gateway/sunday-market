@@ -114,7 +114,7 @@ export function Stepper({
 		<div className="inline-flex min-h-12 items-center rounded-xl border border-stone-300 bg-white p-0.5">
 			<button
 				type="button"
-				aria-label={`Remove one ${name}`}
+				aria-label={`Decrease quantity of ${name}`}
 				disabled={n <= min}
 				onClick={() => onChange(n - 1)}
 				className={b}
@@ -129,7 +129,7 @@ export function Stepper({
 			</output>
 			<button
 				type="button"
-				aria-label={`Add one ${name}`}
+				aria-label={`Increase quantity of ${name}`}
 				disabled={n >= 99}
 				onClick={() => onChange(n + 1)}
 				className={b}

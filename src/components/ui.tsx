@@ -21,7 +21,8 @@ export function useNow(ms = 1000) {
 }
 
 // Toasts: call toast() from anywhere; <Toaster /> lives in the root.
-type Toast = { id: number; text: string; out?: boolean };
+type Action = { label: string; onClick: () => void };
+type Toast = { id: number; text: string; out?: boolean; action?: Action };
 let toasts: Toast[] = [];
 let seq = 0;
 const subs = new Set<() => void>();
@@ -33,14 +34,15 @@ const set = (next: Toast[]) => {
 	emit();
 };
 
-export function toast(text: string) {
+const dismiss = (id: number) => {
+	set(toasts.map((t) => (t.id === id ? { ...t, out: true } : t)));
+	setTimeout(() => set(toasts.filter((t) => t.id !== id)), 200);
+};
+
+export function toast(text: string, action?: Action) {
 	const id = ++seq;
-	set([...toasts, { id, text }].slice(-3));
-	setTimeout(
-		() => set(toasts.map((t) => (t.id === id ? { ...t, out: true } : t))),
-		2400,
-	);
-	setTimeout(() => set(toasts.filter((t) => t.id !== id)), 2600);
+	set([...toasts, { id, text, action }].slice(-3));
+	setTimeout(() => dismiss(id), action ? 6000 : 2400);
 }
 
 const none: Toast[] = [];
@@ -68,6 +70,18 @@ export function Toaster() {
 				>
 					<Icon name="check" className="h-4 w-4 text-lunas" />
 					{t.text}
+					{t.action && (
+						<button
+							type="button"
+							onClick={() => {
+								t.action?.onClick();
+								dismiss(t.id);
+							}}
+							className="pointer-events-auto -my-2 -mr-3 min-h-11 rounded-full px-3 font-bold text-lunas underline"
+						>
+							{t.action.label}
+						</button>
+					)}
 				</div>
 			))}
 		</output>

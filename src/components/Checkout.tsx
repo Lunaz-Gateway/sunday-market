@@ -1,6 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { useSyncExternalStore } from "react";
-import { LunazBadge, MarketLogo, ShopAvatar } from "#/components/Market";
+import {
+	LunazBadge,
+	MarketLogo,
+	ShopAvatar,
+	Stepper,
+} from "#/components/Market";
 import { ProductArt } from "#/components/ProductArt";
 import { Icon } from "#/components/ui";
 import { type Line, MARKET, type Shop, totalOf } from "#/lib/catalog";
@@ -233,11 +238,18 @@ export function OrderSummary({
 	shop,
 	lines,
 	usd,
+	onQty,
+	onRemove,
+	locked,
 	children,
 }: {
 	shop?: Shop;
 	lines: Line[];
 	usd: number | null;
+	// Editing is available only before the order is placed.
+	onQty?: (l: Line, n: number) => void;
+	onRemove?: (l: Line) => void;
+	locked?: boolean;
 	children?: React.ReactNode;
 }) {
 	const total = totalOf(lines);
@@ -262,7 +274,7 @@ export function OrderSummary({
 			)}
 			<ul className="flex flex-col gap-3 border-t border-stone-100 pt-4">
 				{lines.map((l) => (
-					<li key={l.id} className="flex items-center gap-3">
+					<li key={l.id} className="flex items-start gap-3">
 						<span
 							style={{ background: l.tint }}
 							className="relative grid h-14 w-14 shrink-0 place-items-center rounded-xl"
@@ -280,6 +292,23 @@ export function OrderSummary({
 							<span className="block truncate text-xs text-stone-500">
 								{l.note}
 							</span>
+							{onQty && onRemove && (
+								<span className="mt-1.5 flex flex-wrap items-center gap-x-2">
+									<Stepper
+										name={l.name}
+										n={l.qty}
+										min={1}
+										onChange={(n) => onQty(l, n)}
+									/>
+									<button
+										type="button"
+										onClick={() => onRemove(l)}
+										className="min-h-11 rounded-lg px-2 text-sm font-semibold text-stone-600 hover:text-red-700"
+									>
+										Remove<span className="sr-only"> {l.name}</span>
+									</button>
+								</span>
+							)}
 						</span>
 						<span className="text-sm font-semibold tnum">
 							{zec(l.zat * l.qty)}
@@ -287,6 +316,12 @@ export function OrderSummary({
 					</li>
 				))}
 			</ul>
+			{locked && (
+				<p className="text-xs text-stone-500">
+					Items can't be changed after the order is placed. Go back to the cart
+					to start a new order.
+				</p>
+			)}
 			<dl className="flex flex-col gap-2 border-t border-stone-100 pt-4 text-sm">
 				<div className="flex justify-between gap-4">
 					<dt className="text-stone-500">
