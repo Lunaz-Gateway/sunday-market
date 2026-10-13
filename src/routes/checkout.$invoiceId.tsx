@@ -177,7 +177,7 @@ function Page({ invoice }: { invoice: InvoiceDetail }) {
 	const now = useNow();
 	const left = Math.max(0, Math.floor(invoice.expires_at - now / 1000));
 	const expired = status === "expired" || (status === "pending" && left === 0);
-	const uri = invoice.zip321_uri ?? z;
+	const uri = [invoice.zip321_uri, z].find((u) => u?.startsWith("zcash:"));
 	const lines = decodeLines(o);
 	const paid = status === "paid";
 	const open = !expired && (status === "pending" || status === "detected");

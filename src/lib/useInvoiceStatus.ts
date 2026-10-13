@@ -15,10 +15,15 @@ export function useInvoiceStatus(id: string, initial = "pending") {
 		let timer: ReturnType<typeof setTimeout>;
 		let final = false;
 		const connect = () => {
-			ws = new WebSocket(`${WS_URL}/v1/invoices/${id}/ws`);
+			ws = new WebSocket(`${WS_URL}/v1/invoices/${encodeURIComponent(id)}/ws`);
 			ws.onopen = () => setLink("live");
 			ws.onmessage = (e) => {
-				const m = JSON.parse(e.data);
+				let m: { status: string; swap_status?: string };
+				try {
+					m = JSON.parse(e.data);
+				} catch {
+					return;
+				}
 				setState({ status: m.status, swap: m.swap_status ?? undefined });
 				final = ["paid", "underpaid", "expired"].includes(m.status);
 			};

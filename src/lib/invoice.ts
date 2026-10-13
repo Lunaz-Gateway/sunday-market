@@ -13,6 +13,15 @@ export type Invoice = {
 	expires_at: number;
 };
 
+// Upstream bodies are never echoed: a malformed one becomes a generic error
+const parse = async <T>(res: Response): Promise<T> => {
+	try {
+		return (await res.json()) as T;
+	} catch {
+		throw new Error("Unexpected response from the payment server.");
+	}
+};
+
 const apiBase = () => process.env.LUNAZ_API_URL ?? "http://127.0.0.1:8099";
 
 type Seller = { slug: string; apiKey: string; webhookSecret?: string };
@@ -68,7 +77,7 @@ async function postInvoice(seller: string, amountZat: number) {
 			`The payment server couldn't create the invoice (${res.status}). Try again.`,
 		);
 	}
-	return (await res.json()) as Invoice;
+	return parse<Invoice>(res);
 }
 
 const ORDER_ALPHABET = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -168,12 +177,12 @@ export const getInvoice = createServerFn({ method: "GET" })
 			`${apiBase()}/v1/invoices/${encodeURIComponent(data.id)}`,
 		);
 		if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
-		return (await res.json()) as {
+		return parse<{
 			status: string;
 			txid: string | null;
 			received_zat: number;
 			overpaid_zat?: number;
-		};
+		}>(res);
 	});
 
 export type SwapInfo = {
@@ -216,14 +225,14 @@ export const loadInvoice = createServerFn({ method: "GET" })
 		);
 		if (res.status === 404) return null;
 		if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
-		return res.json();
+		return parse<InvoiceDetail>(res);
 	});
 
 export const getSwapAssets = createServerFn({ method: "GET" }).handler(
 	async (): Promise<SwapAsset[]> => {
 		const res = await fetch(`${apiBase()}/v1/swap/assets`);
 		if (!res.ok) throw new Error(`Could not load assets (${res.status})`);
-		return res.json();
+		return parse<SwapAsset[]>(res);
 	},
 );
 
@@ -242,10 +251,11 @@ export const createSwap = createServerFn({ method: "POST" })
 			},
 		);
 		const body = await res.json().catch(() => ({}));
+		const msg = typeof body.error === "string" ? body.error : "";
 		if (res.status === 429) {
-			throw new Error(body.error ?? "Too many attempts, try again later");
+			throw new Error(msg || "Too many attempts, try again later");
 		}
-		if (!res.ok) throw new Error(body.error ?? `Swap failed (${res.status})`);
+		if (!res.ok) throw new Error(msg || `Swap failed (${res.status})`);
 		return {
 			symbol: body.symbol,
 			blockchain: body.blockchain,
