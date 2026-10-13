@@ -25,11 +25,12 @@ Invoice calls (`src/lib/invoice.ts`) are TanStack server functions. They run on 
 
 Like a real merchant integration, the shop keeps its own orders in SQLite (`node:sqlite`, Node 22.13+, no extra dependency). `createOrder` creates the Lunaz invoice, then inserts an `orders` row (`pending`) with an order number like `SM-7K3QX9`. The payment panel still shows live status over WebSocket; the buyer's `/orders` and `/orders/$orderId` pages read the database and refresh every 5 s while an order is open. A browser only lists the order ids saved in its own `localStorage`.
 
-Tables: `orders` (id, seller, invoice_id UNIQUE, lines JSON, amount_zat, status `pending|detected|paid|underpaid|expired`, received_zat, txid, contact_email, created_at, paid_at, updated_at) and `webhook_events` (every delivery with signature validity and the response code).
+Tables: `orders` (id, seller, invoice_id UNIQUE, lines JSON, amount_zat, status `pending|detected|paid|underpaid|expired`, received_zat, txid, contact_email, created_at, paid_at, updated_at) and `webhook_events` (every delivery with signature validity, the response code and, on the accepted delivery of each event, its `event_id` UNIQUE; the column is added in place on older databases).
 
-Webhook receiver: `POST https://<demo host>/api/webhooks/lunaz/<seller-slug>`. It reads the raw body, checks `X-Lunaz-Signature` (hex HMAC-SHA256 of the raw body, keyed with that seller's `webhookSecret`) in constant time, and only then parses the JSON.
+Webhook receiver: `POST https://<demo host>/api/webhooks/lunaz/<seller-slug>`. It reads the raw body and checks `X-Lunaz-Signature: t=<unix seconds>,v1=<hex>`: `v1` must equal HMAC-SHA256 of `"{t}.{raw body}"` keyed with that seller's `webhookSecret` (constant-time compare) and `t` must be within 5 minutes of now. Only then is the JSON parsed.
 
-- Bad signature: logged with `signature_valid=0`, answer 401. Missing secret for the seller: 500.
+- Missing, malformed, stale or wrong signature: logged with `signature_valid=0` (reason on the console), answer 401. Missing secret for the seller: 500.
+- `X-Lunaz-Event-Id` must match the body's `id` (else 400). An event id that was already accepted is logged again and answered 200 `{"ok":true,"duplicate":true}` without touching the order.
 - `invoice.paid` and `invoice.underpaid` update the order by `invoice_id` (a paid order is never downgraded). `swap.*` and `test` events are only logged. Unknown invoices are logged and answered 200.
 
 Configure each seller in the Lunaz dashboard (Settings, Webhooks): set the URL above for that seller's slug, copy the signing secret into that seller's `webhookSecret` in `LUNAZ_SELLERS`, restart, then press "Send test". The URL must be reachable from core-service (locally `http://127.0.0.1:3000/api/webhooks/lunaz/<slug>`; the dev server binds 127.0.0.1).

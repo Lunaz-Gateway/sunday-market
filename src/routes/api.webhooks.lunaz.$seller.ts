@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { nowSecs, store } from "#/lib/db";
 import { sellerList } from "#/lib/invoice";
-import { signatureOk } from "#/lib/webhook";
+import { checkSignature } from "#/lib/webhook";
 
 type Payload = {
+	id?: string;
 	type?: string;
 	invoice_id?: string | null;
 	received_zat?: number;
@@ -18,10 +19,11 @@ function log(
 	code: number,
 	body: string,
 	p?: Payload,
+	eventId: string | null = null,
 ) {
 	store()
 		.prepare(
-			"INSERT INTO webhook_events(seller,type,invoice_id,signature_valid,status_code,body,received_at) VALUES(?,?,?,?,?,?,?)",
+			"INSERT INTO webhook_events(seller,type,invoice_id,signature_valid,status_code,body,received_at,event_id) VALUES(?,?,?,?,?,?,?,?)",
 		)
 		.run(
 			seller,
@@ -31,6 +33,7 @@ function log(
 			code,
 			body.slice(0, 8192),
 			nowSecs(),
+			eventId,
 		);
 }
 
@@ -72,9 +75,13 @@ export const Route = createFileRoute("/api/webhooks/lunaz/$seller")({
 					console.error(`webhook secret not configured for ${params.seller}`);
 					return json({ error: "webhook secret not configured" }, 500);
 				}
-				if (
-					!signatureOk(raw, secret, request.headers.get("x-lunaz-signature"))
-				) {
+				const bad = checkSignature(
+					raw,
+					secret,
+					request.headers.get("x-lunaz-signature"),
+				);
+				if (bad) {
+					console.warn(`webhook ${params.seller}: ${bad} signature`);
 					log(params.seller, false, 401, raw);
 					return json({ error: "invalid signature" }, 401);
 				}
@@ -85,7 +92,19 @@ export const Route = createFileRoute("/api/webhooks/lunaz/$seller")({
 					log(params.seller, true, 400, raw);
 					return json({ error: "invalid json" }, 400);
 				}
-				log(params.seller, true, 200, raw, p);
+				// The header must name the signed body's event.
+				const eventId = request.headers.get("x-lunaz-event-id");
+				if (!eventId || eventId !== p.id) {
+					log(params.seller, true, 400, raw, p);
+					return json({ error: "missing or mismatched event id" }, 400);
+				}
+				try {
+					log(params.seller, true, 200, raw, p, eventId);
+				} catch (e) {
+					if (!String(e).includes("UNIQUE")) throw e;
+					log(params.seller, true, 200, raw, p);
+					return json({ ok: true, duplicate: true }, 200);
+				}
 				apply(params.seller, p);
 				return json({ ok: true }, 200);
 			},

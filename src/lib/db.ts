@@ -53,6 +53,14 @@ export function store(): DatabaseSync {
 			received_at INTEGER NOT NULL
 		);
 	`);
+	// Lunaz event id, set on the accepted delivery only; repeats are logged with NULL.
+	const cols = db.prepare("PRAGMA table_info(webhook_events)").all();
+	if (!cols.some((c) => c.name === "event_id")) {
+		db.exec("ALTER TABLE webhook_events ADD COLUMN event_id TEXT");
+	}
+	db.exec(
+		"CREATE UNIQUE INDEX IF NOT EXISTS webhook_events_event_id ON webhook_events(event_id)",
+	);
 	return db;
 }
 
