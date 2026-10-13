@@ -137,16 +137,18 @@ function Home() {
 					</ul>
 				) : (
 					<div className="rise mt-6 flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-14 text-center ring-1 ring-stone-200">
-						<p className="text-lg font-bold">Nothing matches yet</p>
+						<p className="text-lg font-bold">
+							{q ? `No products match “${q}”` : "No products here yet"}
+						</p>
 						<p className="max-w-sm text-stone-500">
-							Try another word, or browse all {PRODUCTS.length} products from{" "}
-							{SHOPS.length} shops.
+							Check the spelling or try a shorter word. You can also browse all{" "}
+							{PRODUCTS.length} products from {SHOPS.length} shops.
 						</p>
 						<Link
 							to="/"
 							className="press mt-2 min-h-11 rounded-xl px-4 py-2.5 font-bold text-pasar hover:bg-pasar-soft"
 						>
-							Clear search
+							Browse all products
 						</Link>
 					</div>
 				)}
