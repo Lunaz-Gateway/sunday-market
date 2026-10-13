@@ -38,8 +38,6 @@ function badRequest(msg: string): never {
 	throw new Error(msg);
 }
 
-const posSlug = () => process.env.LUNAZ_POS_SELLER || sellerList()[0]?.slug;
-
 async function postInvoice(seller: string, amountZat: number) {
 	const key = sellerList().find((s) => s.slug === seller)?.apiKey;
 	if (!key) {
@@ -70,24 +68,6 @@ async function postInvoice(seller: string, amountZat: number) {
 	}
 	return (await res.json()) as Invoice;
 }
-
-// Cashier: charges an amount to the POS shop.
-export const createInvoice = createServerFn({ method: "POST" })
-	.inputValidator((d: { amountZat: number }) => {
-		if (!Number.isSafeInteger(d.amountZat) || d.amountZat <= 0) {
-			throw new Error("Invalid amount");
-		}
-		return d;
-	})
-	.handler(async ({ data }): Promise<Invoice> => {
-		const slug = posSlug();
-		if (!slug) throw new Error("This terminal has no merchant key configured.");
-		return postInvoice(slug, data.amountZat);
-	});
-
-export const getPosShop = createServerFn({ method: "GET" }).handler(
-	async () => posSlug() ?? null,
-);
 
 // Marketplace: one invoice per shop, priced on the server from the catalog.
 export const createOrder = createServerFn({ method: "POST" })

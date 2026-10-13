@@ -10,7 +10,7 @@ Pasar Kita is a small multi-seller marketplace. Each shop is a separate Lunaz me
 - `/shop/$slug` is a shop page. `/product/$id` is a product page with "Add to cart" and "Buy now".
 - `/cart` groups the cart by shop. Each shop has its own checkout button and its own invoice. The cart is kept in `localStorage`. Paid lines are removed when the checkout shows LUNAS.
 - `/checkout/$invoiceId` is a hosted checkout. It shows the seller, the order lines, a Zcash QR code and address, live status over WebSocket, and cross-chain payment via NEAR Intents (pay with another asset, swapped to ZEC, from 0.001 ZEC per invoice).
-- `/pos` is a cashier tablet for one shop (`LUNAZ_POS_SELLER`). The merchant enters an amount and creates an invoice.
+- `/pos` (the old cashier) and `/store` redirect to `/`.
 
 Shops and products are defined in `src/lib/catalog.ts`. Prices are computed on the server from the catalog, so the browser can't change them.
 
@@ -23,7 +23,6 @@ Invoice calls (`src/lib/invoice.ts`) are TanStack server functions. They run on 
 | Variable | Where | Description |
 | --- | --- | --- |
 | `LUNAZ_SELLERS` | server, runtime, secret | JSON array `[{"slug":"kedai-kopi-senja","apiKey":"lz_..."}, ...]`, one merchant key per shop |
-| `LUNAZ_POS_SELLER` | server, runtime | shop slug that `/pos` charges for (default: first seller) |
 | `LUNAZ_API_KEY` | server, runtime, secret | fallback: if `LUNAZ_SELLERS` is unset, every shop uses this key (a warning is logged once) |
 | `LUNAZ_API_URL` | server, runtime | core-service base URL (default `http://127.0.0.1:8099`) |
 | `VITE_LUNAZ_WS_URL` | public, build time | WebSocket base URL the browser connects to (default `ws://127.0.0.1:8099`) |
@@ -51,7 +50,7 @@ docker build --build-arg VITE_LUNAZ_WS_URL=wss://api.example.com -t lunaz-demo .
 docker run -d --name lunaz-demo --read-only --tmpfs /tmp --cap-drop ALL \
   --security-opt no-new-privileges:true --pids-limit 256 --memory 512m \
   -p 127.0.0.1:3000:3000 -e LUNAZ_API_URL=http://core:8080 \
-  -e LUNAZ_SELLERS="$LUNAZ_SELLERS" -e LUNAZ_POS_SELLER=kedai-kopi-senja \
+  -e LUNAZ_SELLERS="$LUNAZ_SELLERS" \
   --restart unless-stopped lunaz-demo
 ```
 
@@ -74,7 +73,6 @@ services:
     environment:
       LUNAZ_API_URL: http://core:8080
       LUNAZ_SELLERS: ${LUNAZ_SELLERS}
-      LUNAZ_POS_SELLER: kedai-kopi-senja
     restart: unless-stopped
 ```
 
@@ -83,4 +81,4 @@ services:
 - Terminate TLS in a reverse proxy and publish the container on `127.0.0.1` only.
 - The browser must reach core-service WebSocket at `VITE_LUNAZ_WS_URL`, so expose it publicly (as `wss://`). `LUNAZ_API_URL` can stay internal.
 - Changing `VITE_LUNAZ_WS_URL` requires a rebuild.
-- Anyone who can open the cashier page can create invoices with the POS shop's key. Restrict access to `/pos` at the proxy.
+- Anyone can place an order, which creates an invoice with that shop's key. Rate-limit `POST` requests to the server functions at the proxy if needed.

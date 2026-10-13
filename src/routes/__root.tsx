@@ -90,8 +90,8 @@ function NotFound() {
 			<Link to="/" className={btn.lunas}>
 				Go to marketplace
 			</Link>
-			<Link to="/pos" className={btn.ghostDark}>
-				Open cashier
+			<Link to="/cart" className={btn.ghostDark}>
+				View cart
 			</Link>
 		</Shell>
 	);
