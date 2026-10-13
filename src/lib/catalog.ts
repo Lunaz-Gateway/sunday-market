@@ -1,6 +1,6 @@
 import type { Art } from "#/components/ProductArt";
 
-export const MARKET = "Pasar Kita";
+export const MARKET = "Sunday Market";
 // Cross-chain swaps need at least this much per invoice.
 export const MIN_SWAP_ZAT = 100_000;
 
@@ -38,7 +38,7 @@ export type Product = {
 export const SHOPS: Shop[] = [
 	{
 		slug: "kedai-kopi-senja",
-		name: "Kedai Kopi Senja",
+		name: "Dusk Coffee Co.",
 		tagline: "Small-batch coffee, roasted weekly",
 		city: "Bandung",
 		category: "kopi",
@@ -47,7 +47,7 @@ export const SHOPS: Shop[] = [
 	},
 	{
 		slug: "batik-rumah",
-		name: "Batik Rumah",
+		name: "House of Batik",
 		tagline: "Hand-stamped batik from a family workshop",
 		city: "Solo",
 		category: "fashion",
@@ -56,7 +56,7 @@ export const SHOPS: Shop[] = [
 	},
 	{
 		slug: "toko-buku-kecil",
-		name: "Toko Buku Kecil",
+		name: "The Little Bookshop",
 		tagline: "Indonesian stories, new and second-hand",
 		city: "Yogyakarta",
 		category: "buku",
@@ -65,7 +65,7 @@ export const SHOPS: Shop[] = [
 	},
 	{
 		slug: "gadget-mungil",
-		name: "Gadget Mungil",
+		name: "Tiny Gadgets",
 		tagline: "Tiny tech accessories that last",
 		city: "Jakarta",
 		category: "gadget",
@@ -74,7 +74,7 @@ export const SHOPS: Shop[] = [
 	},
 	{
 		slug: "dapur-nenek",
-		name: "Dapur Nenek",
+		name: "Grandma's Kitchen",
 		tagline: "Grandma's recipes, baked fresh every morning",
 		city: "Semarang",
 		category: "camilan",
@@ -87,7 +87,7 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "espresso",
 		shop: "kedai-kopi-senja",
-		name: "Espresso Gayo",
+		name: "Gayo Espresso Roast",
 		note: "Single origin, 250 g",
 		description:
 			"Arabica from the Gayo highlands of Aceh, roasted dark for espresso. Notes of cocoa, palm sugar and a little spice.",
@@ -98,10 +98,10 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "aren",
 		shop: "kedai-kopi-senja",
-		name: "Gula Aren Syrup",
+		name: "Palm Sugar Syrup",
 		note: "Palm sugar, 250 ml",
 		description:
-			"The secret behind a proper es kopi susu. Slow-cooked palm sugar syrup, no additives.",
+			"The secret behind a proper Indonesian iced milk coffee. Slow-cooked palm sugar syrup, no additives.",
 		zat: 80_000,
 		art: "bottle",
 		tint: "#F0DFC6",
@@ -120,7 +120,7 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "beans",
 		shop: "kedai-kopi-senja",
-		name: "Toraja Beans",
+		name: "Toraja Whole Beans",
 		note: "Medium roast, 1 kg",
 		description:
 			"Whole beans from Tana Toraja, roasted medium. Full body with a gentle, earthy finish. Ships within a day of roasting.",
@@ -131,7 +131,7 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "kemeja-parang",
 		shop: "batik-rumah",
-		name: "Kemeja Batik Parang",
+		name: "Parang Batik Shirt",
 		note: "Cotton shirt, M–XL",
 		description:
 			"A short-sleeve shirt in the classic parang motif, stamped by hand with copper cap and natural indigo.",
@@ -143,7 +143,7 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "selendang",
 		shop: "batik-rumah",
-		name: "Selendang Mega Mendung",
+		name: "Mega Mendung Silk Scarf",
 		note: "Silk scarf, 180 cm",
 		description:
 			"The cloud motif of Cirebon on light silk. Wear it as a scarf or hang it as a wall piece.",
@@ -158,7 +158,7 @@ export const PRODUCTS: Product[] = [
 		name: "Batik Tote Bag",
 		note: "Canvas, 38 × 40 cm",
 		description:
-			"A sturdy canvas tote with a kawung panel. Fits a laptop, a market run or both.",
+			"A sturdy canvas tote with a kawung (four-petal) batik panel. Fits a laptop, a market run or both.",
 		zat: 100_000,
 		art: "tote",
 		tint: "#EFE3D2",
@@ -179,8 +179,8 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "bumi-manusia",
 		shop: "toko-buku-kecil",
-		name: "Bumi Manusia",
-		note: "Pramoedya, paperback",
+		name: "This Earth of Mankind",
+		note: "Pramoedya, used paperback",
 		description:
 			"The first book of the Buru Quartet. A second-hand copy in good condition, pencil notes erased.",
 		zat: 150_000,
@@ -191,7 +191,7 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "laskar-pelangi",
 		shop: "toko-buku-kecil",
-		name: "Laskar Pelangi",
+		name: "The Rainbow Troops",
 		note: "Andrea Hirata, paperback",
 		description:
 			"Ten kids, one tiny school on Belitung, and a teacher who never gives up. New copy.",
@@ -203,10 +203,10 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "notebook",
 		shop: "toko-buku-kecil",
-		name: "Buku Catatan Kawung",
+		name: "Kawung Notebook",
 		note: "A5 dot grid, 120 pages",
 		description:
-			"A lay-flat notebook with a kawung cover and thick paper that takes fountain pens.",
+			"A lay-flat notebook with a kawung batik cover and thick paper that takes fountain pens.",
 		zat: 60_000,
 		art: "notebook",
 		tint: "#EDE6D6",
@@ -215,7 +215,7 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "bookmark",
 		shop: "toko-buku-kecil",
-		name: "Wayang Bookmark Set",
+		name: "Shadow Puppet Bookmark Set",
 		note: "Set of 3, leather",
 		description:
 			"Three leather bookmarks cut in shadow-puppet shapes, with cotton tassels.",
@@ -272,10 +272,10 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "nastar",
 		shop: "dapur-nenek",
-		name: "Nastar Nanas",
-		note: "Pineapple tarts, 500 g",
+		name: "Pineapple Tarts",
+		note: "Butter pastry, 500 g",
 		description:
-			"Buttery pastry with slow-cooked pineapple jam, the way Nenek makes them for Lebaran.",
+			"Buttery pastry with slow-cooked pineapple jam, the way Grandma makes them for Eid.",
 		zat: 120_000,
 		art: "jar",
 		tint: "#F3E1C7",
@@ -283,10 +283,10 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "keripik",
 		shop: "dapur-nenek",
-		name: "Keripik Balado",
-		note: "Cassava chips, 200 g",
+		name: "Spicy Cassava Chips",
+		note: "Sweet chili, 200 g",
 		description:
-			"Thin cassava chips tossed in sweet and spicy balado. Dangerously moreish.",
+			"Thin cassava chips tossed in sweet and spicy chili. Dangerously moreish.",
 		zat: 50_000,
 		art: "chips",
 		tint: "#F6DCD3",
@@ -294,8 +294,8 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "rempeyek",
 		shop: "dapur-nenek",
-		name: "Rempeyek Kacang",
-		note: "Peanut crackers, 250 g",
+		name: "Peanut Rice Crackers",
+		note: "With lime leaf, 250 g",
 		description:
 			"Crisp rice-flour crackers with whole peanuts and kaffir lime leaf.",
 		zat: 60_000,
@@ -305,8 +305,8 @@ export const PRODUCTS: Product[] = [
 	{
 		id: "lapis",
 		shop: "dapur-nenek",
-		name: "Lapis Legit",
-		note: "Thousand-layer cake, 20 cm",
+		name: "Thousand-Layer Spice Cake",
+		note: "Baked to order, 20 cm",
 		description:
 			"Eighteen hand-grilled layers of butter, egg and spice. Baked to order, keeps for two weeks.",
 		zat: 250_000,
