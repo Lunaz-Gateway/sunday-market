@@ -7,6 +7,9 @@
   --color-lunas: #c8f169;
   --color-danger: #ff8a7a;
   --color-danger-ink: #a3261a;
+  --color-pasar: #0b7a57;
+  --color-pasar-dark: #08603f;
+  --color-pasar-soft: #e5f3ec;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -34,6 +37,24 @@ body {
 
 .on-light :focus-visible {
   outline-color: var(--color-malam);
+}
+
+.market :focus-visible {
+  outline-color: var(--color-pasar);
+}
+
+/* Keep the footer and toasts clear of the phone cart bar. */
+@media (width < 48rem) {
+  .market:has([data-cartbar]) {
+    padding-bottom: 5rem;
+  }
+  body:has([data-cartbar]) .toaster {
+    bottom: 6rem;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
 }
 
 /* Press feedback for every tappable surface. */
