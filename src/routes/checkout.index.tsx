@@ -373,7 +373,7 @@ function Flow({
 						>
 							Other crypto
 							{TESTNET && (
-								<span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 align-middle text-xs font-bold text-stone-700">
+								<span className="ml-2 whitespace-nowrap rounded-full bg-stone-200 px-2 py-0.5 align-middle text-xs font-bold text-stone-700">
 									Only on mainnet
 								</span>
 							)}
