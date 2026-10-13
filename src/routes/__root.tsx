@@ -8,6 +8,7 @@ import {
 import { useEffect } from "react";
 import { Logo } from "#/components/Logo";
 import { btn, Icon, Toaster } from "#/components/ui";
+import { MARKET } from "#/lib/catalog";
 
 import appCss from "../styles.css?url";
 
@@ -22,7 +23,7 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "Lunaz Cashier",
+				title: MARKET,
 			},
 			{ name: "theme-color", content: "#1C1F3D" },
 		],
@@ -87,10 +88,10 @@ function NotFound() {
 			body="This link doesn't lead anywhere. Check the address or head back."
 		>
 			<Link to="/" className={btn.lunas}>
-				Open cashier
+				Go to marketplace
 			</Link>
-			<Link to="/store" className={btn.ghostDark}>
-				Visit store
+			<Link to="/pos" className={btn.ghostDark}>
+				Open cashier
 			</Link>
 		</Shell>
 	);
@@ -114,7 +115,7 @@ function Crash({ reset }: ErrorComponentProps) {
 				Try again
 			</button>
 			<Link to="/" className={btn.ghostDark}>
-				Open cashier
+				Go to marketplace
 			</Link>
 		</Shell>
 	);

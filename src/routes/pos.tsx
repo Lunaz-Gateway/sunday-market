@@ -2,12 +2,19 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Logo } from "#/components/Logo";
 import { btn, Dot, Icon, QrCode, useNow } from "#/components/ui";
+import { shopOf } from "#/lib/catalog";
 import { clock, fiat, short, ZAT, zec } from "#/lib/format";
-import { createInvoice, getInvoice, type Invoice } from "#/lib/invoice";
+import {
+	createInvoice,
+	getInvoice,
+	getPosShop,
+	type Invoice,
+} from "#/lib/invoice";
 import { useZecUsd } from "#/lib/price";
 import { useInvoiceStatus } from "#/lib/useInvoiceStatus";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/pos")({
+	loader: () => getPosShop(),
 	head: () => ({ meta: [{ title: "Lunaz Cashier" }] }),
 	component: Cashier,
 });
@@ -149,11 +156,20 @@ function Cashier() {
 
 function TopBar({ sound, onSound }: { sound: boolean; onSound: () => void }) {
 	const fs = useFullscreen();
+	const shop = shopOf(Route.useLoaderData() ?? "");
 	const tool =
 		"press flex h-14 w-14 items-center justify-center rounded-2xl text-kertas/80 hover:bg-kertas/5 active:bg-kertas/10";
 	return (
 		<header className="flex items-center justify-between gap-4 px-4 pt-4 sm:px-6">
-			<Logo />
+			<div className="flex min-w-0 items-center gap-4">
+				<Logo className="h-auto w-28 shrink-0 sm:w-32" />
+				{shop && (
+					<p className="hidden min-w-0 border-l border-kertas/15 pl-4 text-sm sm:block">
+						<span className="block text-kertas/50">Charging for</span>
+						<span className="block truncate font-bold">{shop.name}</span>
+					</p>
+				)}
+			</div>
 			<div className="flex items-center gap-1">
 				{fs.can && (
 					<button
@@ -195,12 +211,17 @@ function TopBar({ sound, onSound }: { sound: boolean; onSound: () => void }) {
 							/>
 						</span>
 					</button>
+					{shop && (
+						<p className="px-3 pt-2 pb-1 text-xs text-kertas/50 sm:hidden">
+							Charging for <b className="text-kertas">{shop.name}</b>
+						</p>
+					)}
 					<Link
-						to="/store"
+						to="/"
 						className="flex min-h-14 items-center gap-3 rounded-xl px-3 font-semibold hover:bg-kertas/5"
 					>
 						<Icon name="cart" className="h-5 w-5 text-kertas/70" />
-						Open demo store
+						Open marketplace
 					</Link>
 				</div>
 			</div>
@@ -376,6 +397,7 @@ function InvoiceView({
 	onDone: (keepAmount?: boolean) => void;
 }) {
 	const { status, received, overpaid, link } = useInvoiceStatus(invoice.id);
+	const pos = Route.useLoaderData();
 	const now = useNow() / 1000;
 	const [start] = useState(() => Date.now() / 1000);
 	const [txid, setTxid] = useState<string | null>(null);
@@ -504,7 +526,11 @@ function InvoiceView({
 					<Link
 						to="/checkout/$invoiceId"
 						params={{ invoiceId: invoice.id }}
-						search={{ z: invoice.zip321_uri, o: undefined }}
+						search={{
+							z: invoice.zip321_uri,
+							o: undefined,
+							s: pos ?? undefined,
+						}}
 						className={`${btn.ghostDark} flex-1`}
 					>
 						Pay with another asset
