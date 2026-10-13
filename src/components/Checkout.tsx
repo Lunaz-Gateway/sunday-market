@@ -50,6 +50,23 @@ export function saveOrder(id: string, rec: OrderRecord) {
 	} catch {}
 }
 
+const ORDER_IDS = "orders";
+
+export function readOrderIds(): string[] {
+	try {
+		return JSON.parse(localStorage.getItem(ORDER_IDS) ?? "[]");
+	} catch {
+		return [];
+	}
+}
+
+export function rememberOrder(id: string) {
+	try {
+		const ids = readOrderIds().filter((x) => x !== id);
+		localStorage.setItem(ORDER_IDS, JSON.stringify([id, ...ids].slice(0, 50)));
+	} catch {}
+}
+
 export function readOrder(id: string): OrderRecord | null {
 	try {
 		return JSON.parse(localStorage.getItem(`order:${id}`) ?? "null");

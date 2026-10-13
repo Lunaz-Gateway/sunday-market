@@ -335,7 +335,13 @@ export function MarketShell({
 					<div className="order-last w-full sm:order-none sm:w-auto sm:flex-1">
 						<Search q={q} />
 					</div>
-					<div className="ml-auto sm:ml-0">
+					<div className="ml-auto flex items-center gap-1 sm:ml-0">
+						<Link
+							to="/orders"
+							className="press flex h-11 shrink-0 items-center rounded-xl px-3 font-semibold text-stone-800 hover:bg-stone-100"
+						>
+							Orders
+						</Link>
 						<CartButton />
 					</div>
 				</div>

@@ -387,6 +387,9 @@ function Confirmed({
 					<Link to="/" className={`${mbtn.primary} min-h-14`}>
 						Continue shopping
 					</Link>
+					<Link to="/orders" className={`${mbtn.outline} min-h-14`}>
+						View your orders
+					</Link>
 					{shop && (
 						<Link
 							to="/shop/$slug"

@@ -5,6 +5,7 @@ import {
 	type Details,
 	OrderSummary,
 	readDraft,
+	rememberOrder,
 	saveDraft,
 	saveOrder,
 	useHydrated,
@@ -237,7 +238,10 @@ function Flow({
 		setError("");
 		const o = encodeLines(Object.fromEntries(lines.map((l) => [l.id, l.qty])));
 		try {
-			const inv = await createOrder({ data: { seller: shop.slug, lines: o } });
+			const inv = await createOrder({
+				data: { seller: shop.slug, lines: o, email: d.email },
+			});
+			rememberOrder(inv.orderId);
 			saveOrder(inv.id, { ...d, seller: shop.slug, o, buyNow: Boolean(buy) });
 			await navigate({
 				to: "/checkout/$invoiceId",

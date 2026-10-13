@@ -15,8 +15,11 @@ import { Route as PosRouteImport } from './routes/pos'
 import { Route as StoreRouteImport } from './routes/store'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout.index'
 import { Route as CheckoutInvoiceIdRouteImport } from './routes/checkout.$invoiceId'
+import { Route as OrdersIndexRouteImport } from './routes/orders.index'
+import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as ShopSlugRouteImport } from './routes/shop.$slug'
+import { Route as ApiWebhooksLunazSellerRouteImport } from './routes/api.webhooks.lunaz.$seller'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -48,6 +51,16 @@ const CheckoutInvoiceIdRoute = CheckoutInvoiceIdRouteImport.update({
   path: '/checkout/$invoiceId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersIndexRoute = OrdersIndexRouteImport.update({
+  id: '/orders/',
+  path: '/orders/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProductIdRoute = ProductIdRouteImport.update({
   id: '/product/$id',
   path: '/product/$id',
@@ -58,6 +71,11 @@ const ShopSlugRoute = ShopSlugRouteImport.update({
   path: '/shop/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksLunazSellerRoute = ApiWebhooksLunazSellerRouteImport.update({
+  id: '/api/webhooks/lunaz/$seller',
+  path: '/api/webhooks/lunaz/$seller',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -65,9 +83,12 @@ export interface FileRoutesByFullPath {
   '/pos': typeof PosRoute
   '/store': typeof StoreRoute
   '/checkout/$invoiceId': typeof CheckoutInvoiceIdRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/product/$id': typeof ProductIdRoute
   '/shop/$slug': typeof ShopSlugRoute
   '/checkout/': typeof CheckoutIndexRoute
+  '/orders/': typeof OrdersIndexRoute
+  '/api/webhooks/lunaz/$seller': typeof ApiWebhooksLunazSellerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,9 +96,12 @@ export interface FileRoutesByTo {
   '/pos': typeof PosRoute
   '/store': typeof StoreRoute
   '/checkout/$invoiceId': typeof CheckoutInvoiceIdRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/product/$id': typeof ProductIdRoute
   '/shop/$slug': typeof ShopSlugRoute
   '/checkout': typeof CheckoutIndexRoute
+  '/orders': typeof OrdersIndexRoute
+  '/api/webhooks/lunaz/$seller': typeof ApiWebhooksLunazSellerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +110,12 @@ export interface FileRoutesById {
   '/pos': typeof PosRoute
   '/store': typeof StoreRoute
   '/checkout/$invoiceId': typeof CheckoutInvoiceIdRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/product/$id': typeof ProductIdRoute
   '/shop/$slug': typeof ShopSlugRoute
   '/checkout/': typeof CheckoutIndexRoute
+  '/orders/': typeof OrdersIndexRoute
+  '/api/webhooks/lunaz/$seller': typeof ApiWebhooksLunazSellerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,9 +125,12 @@ export interface FileRouteTypes {
     | '/pos'
     | '/store'
     | '/checkout/$invoiceId'
+    | '/orders/$orderId'
     | '/product/$id'
     | '/shop/$slug'
     | '/checkout/'
+    | '/orders/'
+    | '/api/webhooks/lunaz/$seller'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -108,9 +138,12 @@ export interface FileRouteTypes {
     | '/pos'
     | '/store'
     | '/checkout/$invoiceId'
+    | '/orders/$orderId'
     | '/product/$id'
     | '/shop/$slug'
     | '/checkout'
+    | '/orders'
+    | '/api/webhooks/lunaz/$seller'
   id:
     | '__root__'
     | '/'
@@ -118,9 +151,12 @@ export interface FileRouteTypes {
     | '/pos'
     | '/store'
     | '/checkout/$invoiceId'
+    | '/orders/$orderId'
     | '/product/$id'
     | '/shop/$slug'
     | '/checkout/'
+    | '/orders/'
+    | '/api/webhooks/lunaz/$seller'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,9 +165,12 @@ export interface RootRouteChildren {
   PosRoute: typeof PosRoute
   StoreRoute: typeof StoreRoute
   CheckoutInvoiceIdRoute: typeof CheckoutInvoiceIdRoute
+  OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   ProductIdRoute: typeof ProductIdRoute
   ShopSlugRoute: typeof ShopSlugRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
+  OrdersIndexRoute: typeof OrdersIndexRoute
+  ApiWebhooksLunazSellerRoute: typeof ApiWebhooksLunazSellerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -178,6 +217,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutInvoiceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders/': {
+      id: '/orders/'
+      path: '/orders'
+      fullPath: '/orders/'
+      preLoaderRoute: typeof OrdersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/product/$id': {
       id: '/product/$id'
       path: '/product/$id'
@@ -192,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/lunaz/$seller': {
+      id: '/api/webhooks/lunaz/$seller'
+      path: '/api/webhooks/lunaz/$seller'
+      fullPath: '/api/webhooks/lunaz/$seller'
+      preLoaderRoute: typeof ApiWebhooksLunazSellerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -201,9 +261,12 @@ const rootRouteChildren: RootRouteChildren = {
   PosRoute: PosRoute,
   StoreRoute: StoreRoute,
   CheckoutInvoiceIdRoute: CheckoutInvoiceIdRoute,
+  OrdersOrderIdRoute: OrdersOrderIdRoute,
   ProductIdRoute: ProductIdRoute,
   ShopSlugRoute: ShopSlugRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,
+  OrdersIndexRoute: OrdersIndexRoute,
+  ApiWebhooksLunazSellerRoute: ApiWebhooksLunazSellerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
