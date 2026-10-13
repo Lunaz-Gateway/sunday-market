@@ -20,7 +20,9 @@ RUN bun run build && mkdir /data
 
 FROM gcr.io/distroless/nodejs22-debian12:nonroot
 WORKDIR /app
-ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DEMO_DB=/data/demo.db
+# Runtime copy of the build value: server.mjs allows this origin in the CSP connect-src
+ARG VITE_LUNAZ_WS_URL=ws://127.0.0.1:8099
+ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DEMO_DB=/data/demo.db VITE_LUNAZ_WS_URL=$VITE_LUNAZ_WS_URL
 COPY --from=prod-deps --chown=nonroot:nonroot /app/node_modules ./node_modules
 COPY --from=build --chown=nonroot:nonroot /app/dist ./dist
 COPY --chown=nonroot:nonroot package.json server.mjs ./
