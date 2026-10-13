@@ -96,7 +96,7 @@ function CheckoutPage() {
 }
 
 const field =
-	"w-full rounded-xl bg-white px-4 text-base ring-1 ring-stone-300 transition-shadow duration-150 placeholder:text-stone-400 focus:ring-2 focus:ring-pasar focus:outline-none";
+	"w-full rounded-xl bg-white px-4 text-base ring-1 ring-stone-300 transition-shadow duration-150 placeholder:text-stone-500 focus:ring-2 focus:ring-pasar focus:outline-none";
 
 function Flow({
 	shop,
@@ -120,15 +120,25 @@ function Flow({
 	const swapOk = total >= MIN_SWAP_ZAT;
 	const [method, setMethod] = useState<"zec" | "other">("zec");
 	const [busy, setBusy] = useState(false);
+	const [badEmail, setBadEmail] = useState(false);
 	const [error, setError] = useState("");
 	const search = { seller: shop.slug, buy };
 
 	if (step !== "payment") {
 		return (
 			<form
+				noValidate
 				className="rise flex flex-col gap-5 rounded-3xl bg-white p-5 ring-1 ring-stone-200 sm:p-8"
 				onSubmit={(e) => {
 					e.preventDefault();
+					const email = e.currentTarget.elements.namedItem(
+						"email",
+					) as HTMLInputElement;
+					if (!email.validity.valid) {
+						setBadEmail(true);
+						email.focus();
+						return;
+					}
 					saveDraft(d);
 					navigate({ to: "/checkout", search: { ...search, step: "payment" } });
 				}}
@@ -138,9 +148,9 @@ function Flow({
 						Contact and delivery
 					</h1>
 					<p className="mt-1 flex items-start gap-2 text-sm text-stone-500">
-						<Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
-						Demo store, no real shipping. Every field is optional and stays in
-						this browser. Nothing here is sent to Lunaz or the shop.
+						<Icon name="lock" className="mt-0.5 h-4 w-4 shrink-0" />
+						All fields are optional. This is a demo store: nothing ships, and
+						your details stay in this browser.
 					</p>
 				</div>
 				<label className="flex flex-col gap-1.5 text-sm font-semibold">
@@ -148,14 +158,32 @@ function Flow({
 						Email <span className="font-normal text-stone-500">(optional)</span>
 					</span>
 					<input
+						name="email"
 						type="email"
 						autoComplete="email"
 						inputMode="email"
+						autoCapitalize="off"
+						spellCheck={false}
 						value={d.email}
-						onChange={set("email")}
+						onChange={(e) => {
+							set("email")(e);
+							if (badEmail) setBadEmail(!e.target.validity.valid);
+						}}
+						onBlur={(e) => setBadEmail(!e.target.validity.valid)}
+						aria-invalid={badEmail}
+						aria-describedby={badEmail ? "email-error" : undefined}
 						placeholder="you@example.com"
-						className={`${field} h-12`}
+						className={`${field} h-12 aria-invalid:ring-2 aria-invalid:ring-red-700`}
 					/>
+					{badEmail && (
+						<span
+							id="email-error"
+							className="flex items-center gap-1.5 text-sm font-medium text-red-700"
+						>
+							<Icon name="alert" className="h-4 w-4 shrink-0" />
+							Enter an email like name@example.com, or leave it empty.
+						</span>
+					)}
 				</label>
 				<label className="flex flex-col gap-1.5 text-sm font-semibold">
 					<span>
@@ -164,6 +192,7 @@ function Flow({
 					</span>
 					<input
 						autoComplete="name"
+						autoCapitalize="words"
 						value={d.name}
 						onChange={set("name")}
 						className={`${field} h-12`}
@@ -287,7 +316,7 @@ function Flow({
 					/>
 					<span className="min-w-0 flex-1">
 						<span
-							className={`block font-bold ${swapOk ? "" : "text-stone-400"}`}
+							className={`block font-bold ${swapOk ? "" : "text-stone-500"}`}
 						>
 							Other crypto
 						</span>
