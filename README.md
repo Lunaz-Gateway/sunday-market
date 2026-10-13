@@ -28,6 +28,7 @@ Invoice calls (`src/lib/invoice.ts`) are TanStack server functions. They run on 
 | `LUNAZ_SELLERS` | server, runtime, secret | JSON array `[{"slug":"kedai-kopi-senja","apiKey":"lz_..."}, ...]`, one merchant key per shop |
 | `LUNAZ_API_KEY` | server, runtime, secret | fallback: if `LUNAZ_SELLERS` is unset, every shop uses this key (a warning is logged once) |
 | `LUNAZ_API_URL` | server, runtime | core-service base URL (default `http://127.0.0.1:8099`) |
+| `VITE_LUNAZ_SITE_URL` | public, build time | Lunaz website behind the "Payments by Lunaz" badge (default `https://lunaz.example.com`) |
 | `VITE_LUNAZ_WS_URL` | public, build time | WebSocket base URL the browser connects to (default `ws://127.0.0.1:8099`) |
 
 `VITE_*` values are baked into the client bundle at build time and are public. Use `wss://` when the page is served over HTTPS.

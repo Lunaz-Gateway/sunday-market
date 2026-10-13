@@ -37,7 +37,12 @@ export function MarketLogo() {
 
 export function LunazBadge({ label = "Payments by" }: { label?: string }) {
 	return (
-		<span className="inline-flex items-center gap-2 rounded-full bg-malam py-1.5 pr-3 pl-3 text-xs font-semibold whitespace-nowrap text-kertas">
+		<a
+			href={import.meta.env.VITE_LUNAZ_SITE_URL ?? "https://lunaz.example.com"}
+			target="_blank"
+			rel="noopener"
+			className="inline-flex items-center gap-2 rounded-full bg-malam py-1.5 pr-3 pl-3 text-xs font-semibold whitespace-nowrap text-kertas"
+		>
 			{label}
 			<img
 				src="/lunaz-horizontal-on-dark.svg"
@@ -46,7 +51,7 @@ export function LunazBadge({ label = "Payments by" }: { label?: string }) {
 				height={256}
 				className="h-3.5 w-auto"
 			/>
-		</span>
+		</a>
 	);
 }
 

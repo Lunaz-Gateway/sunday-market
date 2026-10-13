@@ -14,7 +14,8 @@ COPY . .
 # VITE_LUNAZ_WS_URL is public and baked into the client bundle at build time:
 # never pass secrets as build args.
 ARG VITE_LUNAZ_WS_URL=ws://127.0.0.1:8099
-ENV VITE_LUNAZ_WS_URL=$VITE_LUNAZ_WS_URL
+ARG VITE_LUNAZ_SITE_URL=https://lunaz.example.com
+ENV VITE_LUNAZ_WS_URL=$VITE_LUNAZ_WS_URL VITE_LUNAZ_SITE_URL=$VITE_LUNAZ_SITE_URL
 RUN bun run build
 
 FROM gcr.io/distroless/nodejs22-debian12:nonroot
