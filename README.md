@@ -48,7 +48,17 @@ In Docker the database lives in the `/data` volume: `-v lunaz-demo-data:/data` w
 | `VITE_LUNAZ_SITE_URL` | public, build time | Lunaz website behind the "Payments by Lunaz" badge (default `https://lunaz.example.com`) |
 | `VITE_LUNAZ_WS_URL` | public, build time | WebSocket base URL the browser connects to (default `ws://127.0.0.1:8099`) |
 
+`VITE_LUNAZ_WS_URL` must also be set at runtime (the Dockerfile does this): `server.mjs` derives the CSP `connect-src` WebSocket origin from it.
+
 `VITE_*` values are baked into the client bundle at build time and are public. Use `wss://` when the page is served over HTTPS.
+
+## Security headers and CSP
+
+`server.mjs` adds `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and `Permissions-Policy` to every response, including the webhook receiver (harmless for server-to-server calls). Set `HSTS=1` to add `Strict-Transport-Security`; setting it at the TLS proxy is better.
+
+The CSP allows `'self'`, the `VITE_LUNAZ_WS_URL` origin for `connect-src`, `data:`/`blob:` images (QR codes) and Google Fonts. `script-src` and `style-src` keep `'unsafe-inline'` because TanStack Start injects inline hydration scripts. To allow another origin, add it to the `csp` array at the top of `server.mjs`, rebuild and check the browser console for violations.
+
+Caching: `/checkout/*`, `/orders/*`, `/_serverFn/*` and `/api/*` send `Cache-Control: no-store`; hashed `/assets/*` are `public, max-age=31536000, immutable`. Malformed responses from core-service become a generic error, and the "Open in wallet" link only renders for `zcash:` URIs.
 
 ## Local development
 
