@@ -614,8 +614,8 @@ function ZecTab({
 	if (!uri) {
 		return (
 			<p className="rounded-2xl bg-malam/5 p-4 text-sm">
-				The QR code is only shown on the device that placed the order. Send the
-				amount below to the address below from any Zcash wallet.
+				The payment request is only shown on the device that placed the order.
+				Open this order there to pay.
 			</p>
 		);
 	}
@@ -633,15 +633,13 @@ function ZecTab({
 				<Icon name="wallet" className="h-5 w-5" />
 				Open in wallet
 			</a>
+			{/* The URI may carry more than one payment (e.g. a fee), so never split it into address and amount. */}
 			<Row
-				label={rest ? "Amount left to pay" : "Amount"}
-				value={amount}
-				shown={`${amount} ZEC`}
-				what="Amount"
+				label={rest ? "Payment request for the amount left" : "Payment request"}
+				value={uri}
+				shown={short(uri, 14)}
+				what="Payment request"
 			/>
-			{invoice.address && (
-				<Row label="Address" value={invoice.address} what="Address" />
-			)}
 		</div>
 	);
 }
