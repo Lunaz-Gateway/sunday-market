@@ -111,11 +111,3 @@ services:
 volumes:
   demo-data:
 ```
-
-## Deploy notes
-
-- Terminate TLS in a reverse proxy and publish the container on `127.0.0.1` only.
-- The browser must reach core-service WebSocket at `VITE_LUNAZ_WS_URL`, so expose it publicly (as `wss://`). `LUNAZ_API_URL` can stay internal.
-- Changing `VITE_TESTNET` or `VITE_MAINNET_URL` also requires a rebuild.
-- Changing `VITE_LUNAZ_WS_URL` requires a rebuild.
-- Anyone can place an order, which creates an invoice with that shop's key. Rate-limit `POST` requests to the server functions at the proxy if needed.
