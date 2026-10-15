@@ -35,6 +35,11 @@ body {
   outline-offset: 3px;
 }
 
+/* Text fields show focus through their border, not an outline. */
+:is(input:not([type="checkbox"], [type="radio"]), textarea, select):focus-visible {
+  outline: none;
+}
+
 .on-light :focus-visible {
   outline-color: var(--color-malam);
 }

@@ -743,7 +743,7 @@ function OtherTab({
 		}
 	};
 	const field =
-		"min-h-14 w-full rounded-2xl bg-white px-4 text-base ring-1 ring-malam/15 transition-shadow duration-150 focus:ring-2 focus:ring-malam focus:outline-none disabled:opacity-60";
+		"min-h-14 w-full rounded-2xl bg-white px-4 text-base ring-1 ring-malam/15 transition-shadow duration-150 focus:ring-malam/40 focus:outline-none disabled:opacity-60";
 
 	return (
 		<form onSubmit={submit} className="flex flex-col gap-5" noValidate>
