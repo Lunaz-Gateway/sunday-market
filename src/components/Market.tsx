@@ -270,7 +270,7 @@ function Search({ q }: { q: string }) {
 							replace: true,
 						});
 					}}
-					className="h-11 w-full rounded-xl bg-stone-100 pr-3 pl-11 text-base text-stone-900 ring-1 ring-transparent transition-shadow duration-150 placeholder:text-stone-500 focus:bg-white focus:ring-2 focus:ring-pasar focus:outline-none sm:text-sm"
+					className="h-11 w-full rounded-xl bg-stone-100 pr-3 pl-11 text-base text-stone-900 ring-1 ring-transparent transition-shadow duration-150 placeholder:text-stone-500 focus:bg-white focus:ring-stone-300 focus:outline-none sm:text-sm"
 				/>
 			</form>
 		</search>

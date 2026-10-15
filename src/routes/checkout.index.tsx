@@ -145,7 +145,7 @@ function CheckoutPage() {
 }
 
 const field =
-	"w-full rounded-xl bg-white px-4 text-base ring-1 ring-stone-300 transition-shadow duration-150 placeholder:text-stone-500 focus:ring-2 focus:ring-pasar focus:outline-none";
+	"w-full rounded-xl bg-white px-4 text-base ring-1 ring-stone-300 transition-shadow duration-150 placeholder:text-stone-500 focus:ring-stone-500 focus:outline-none";
 
 function Flow({
 	shop,
