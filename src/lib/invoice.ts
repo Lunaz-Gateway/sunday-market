@@ -193,6 +193,7 @@ export type SwapInfo = {
 	amount_in_formatted: string;
 	deadline: number | string;
 	deposit_memo?: string | null;
+	deposit_uri?: string | null;
 	amount_in_usd?: number | string | null;
 	time_estimate?: number;
 };
@@ -261,6 +262,7 @@ export const createSwap = createServerFn({ method: "POST" })
 			blockchain: body.blockchain,
 			deposit_address: body.deposit_address,
 			deposit_memo: body.deposit_memo,
+			deposit_uri: body.deposit_uri,
 			amount_in_formatted: body.amount_in_formatted,
 			amount_in_usd: body.amount_in_usd,
 			deadline: body.deadline,

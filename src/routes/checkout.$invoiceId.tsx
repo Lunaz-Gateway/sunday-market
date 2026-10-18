@@ -882,11 +882,26 @@ function Deposit({
 			{sending && (
 				<>
 					<QrCode
-						text={swap.deposit_address}
-						alt={`${swap.symbol} deposit address QR code`}
+						text={swap.deposit_uri ?? swap.deposit_address}
+						alt={
+							swap.deposit_uri
+								? `${swap.symbol} payment request QR code`
+								: `${swap.symbol} deposit address QR code`
+						}
 						symbol={false}
 						className="mx-auto w-full max-w-[13rem] ring-1 ring-malam/10"
 					/>
+					{swap.deposit_uri && (
+						<>
+							<p className="text-center text-sm text-malam/60">
+								Scan with your wallet app to fill in the amount and address.
+							</p>
+							<a href={swap.deposit_uri} className={btn.ink}>
+								<Icon name="wallet" className="h-5 w-5" />
+								Open in wallet
+							</a>
+						</>
+					)}
 					<Row
 						label="Deposit address"
 						value={swap.deposit_address}
